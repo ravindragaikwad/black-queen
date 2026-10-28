@@ -1,0 +1,181 @@
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const r = require('../render');
+const { botNames, newScoreboard, applyRound } = require('../scoreboard');
+
+const names = botNames(6);
+
+function viewFixture(over = {}) {
+  return {
+    n: 6, you: 0, phase: 'bidding', turn: 0,
+    yourHand: ['AS', 'KS', 'QH', '10H', '5D', '9C', '7C', '3D'],
+    handSizes: [8, 8, 8, 8, 8, 8],
+    highBid: null, highBidder: null, bidder: null, bid: null, trump: null,
+    partnerCards: [], revealedPartners: [], trick: [], lastTrick: null,
+    captured: [0, 0, 0, 0, 0, 0],
+    removed: ['2D', '2C', '2H', '2S'], result: null,
+    ...over,
+  };
+}
+
+function ctxFixture({ view = {}, state = {}, ...over } = {}) {
+  return {
+    screen: 'game', names, selected: null, bidAmount: 0, trump: null, partnerPicks: [],
+    setup: { n: 6, savedMismatch: false }, scoreboard: newScoreboard(6),
+    state: {
+      view: viewFixture(view), userTurn: true, paused: false, completedTrick: null,
+      bids: [null, null, null, null, null, null], ...state,
+    },
+    ...over,
+  };
+}
+
+const cardTags = (html) => html.match(/<button class="card[^>]*>/g) || [];
+const rowsOf = (html) => html.split('<div class="hand-row">').slice(1);
+
+const TEN = ['AS', 'KS', 'QS', 'JS', '10S', 'AH', 'KH', 'QH', 'JH', '10H'];
+const handOpts = (o = {}) => ({ legal: TEN, selected: null, partnerCards: [], enabled: true, ...o });
+
+test('10-card hand renders two rows of 5; 5-card hand renders one row', () => {
+  const ten = rowsOf(r.renderHand(TEN, handOpts()));
+  assert.equal(ten.length, 2);
+  assert.ok(ten.every((row) => cardTags(row).length === 5));
+  const five = rowsOf(r.renderHand(TEN.slice(0, 5), handOpts()));
+  assert.equal(five.length, 1);
+  assert.equal(cardTags(five[0]).length, 5);
+});
+
+test('no row ever holds more than 5 cards, for any hand size', () => {
+  for (let k = 1; k <= 10; k++) {
+    const rows = rowsOf(r.renderHand(TEN.slice(0, k), handOpts()));
+    assert.ok(rows.every((row) => cardTags(row).length <= 5), `size ${k}`);
+  }
+});
+
+test('illegal cards are aria-disabled with no data-action', () => {
+  const tags = cardTags(r.renderHand(TEN, handOpts({ legal: ['AS', 'KS'] })));
+  const enabled = tags.filter((t) => t.includes('data-action'));
+  assert.equal(enabled.length, 2);
+  assert.equal(tags.filter((t) => t.includes('aria-disabled="true"')).length, 8);
+  assert.deepEqual(enabled.map((t) => t.match(/data-card="([^"]+)"/)[1]).sort(), ['AS', 'KS']);
+});
+
+test('when enabled is false no card is actionable', () => {
+  const tags = cardTags(r.renderHand(TEN, handOpts({ enabled: false })));
+  assert.equal(tags.length, 10);
+  assert.ok(tags.every((t) => !t.includes('data-action') && t.includes('aria-disabled="true"')));
+});
+
+test('selected card has class selected and play action; others select', () => {
+  const tags = cardTags(r.renderHand(TEN, handOpts({ selected: 'KH' })));
+  const sel = tags.filter((t) => t.includes('selected'));
+  assert.equal(sel.length, 1);
+  assert.ok(sel[0].includes('data-action="play"') && sel[0].includes('data-card="KH"'));
+  const others = tags.filter((t) => !t.includes('selected'));
+  assert.ok(others.every((t) => t.includes('data-action="select"')));
+});
+
+test('a named partner card in the user hand has class partner-card', () => {
+  const tags = cardTags(r.renderHand(TEN, handOpts({ partnerCards: ['AH'] })));
+  const marked = tags.filter((t) => t.includes('partner-card'));
+  assert.equal(marked.length, 1);
+  assert.ok(marked[0].includes('data-card="AH"'));
+});
+
+test('partner holder is not marked until revealed', () => {
+  const play = { phase: 'play', bidder: 2, bid: 90, trump: 'H', partnerCards: ['KH'], turn: 0 };
+  const hidden = r.renderScreen(ctxFixture({ view: { ...play, revealedPartners: [] } }));
+  assert.ok(!hidden.includes('badge-partner'), 'no partner badge yet');
+  assert.ok(hidden.includes('K♥'), 'named partner card is public');
+  const shown = r.renderScreen(ctxFixture({ view: { ...play, revealedPartners: [3] } }));
+  assert.ok(shown.includes('badge-partner'));
+  assert.match(shown, new RegExp(`data-seat="3"[^]*?badge-partner`));
+});
+
+test('playing screen never contains another player hand', () => {
+  const html = r.renderScreen(ctxFixture({ view: { phase: 'play', bidder: 1, bid: 80, trump: 'S', partnerCards: ['AH'] } }));
+  const cardsShown = cardTags(html).map((t) => t.match(/data-card="([^"]+)"/)).filter(Boolean).map((m) => m[1]);
+  assert.ok(cardsShown.every((c) => viewFixture().yourHand.includes(c)));
+});
+
+test('tapping is impossible when it is not the user turn or during the pause', () => {
+  const notTurn = r.renderScreen(ctxFixture({ view: { phase: 'play', turn: 3, bidder: 1, trump: 'S' }, state: { userTurn: false } }));
+  assert.ok(cardTags(notTurn).every((t) => !t.includes('data-action')));
+  const paused = r.renderScreen(ctxFixture({ view: { phase: 'play', turn: 0, bidder: 1, trump: 'S' }, state: { userTurn: false, paused: true } }));
+  assert.ok(cardTags(paused).every((t) => !t.includes('data-action')));
+});
+
+test('bidding screen shows each seat bid or pass and controls only on the user turn', () => {
+  const bids = [null, 'pass', 85, null, null, null];
+  const mine = r.renderScreen(ctxFixture({ view: { highBid: 85, highBidder: 2 }, state: { bids } }));
+  assert.ok(mine.includes('pass') && mine.includes('85'));
+  assert.ok(mine.includes('data-action="bid"') && mine.includes('data-action="pass"'));
+  assert.ok(mine.includes('90'), 'default amount is highBid + 5');
+  const theirs = r.renderScreen(ctxFixture({ view: { turn: 2, highBid: 85, highBidder: 2 }, state: { bids, userTurn: false } }));
+  assert.ok(!theirs.includes('data-action="bid"') && !theirs.includes('data-action="pass"'));
+});
+
+test('bidding default amount is the minimum bid when nobody has bid', () => {
+  const html = r.renderScreen(ctxFixture());
+  assert.match(html, /class="bid-amount"[^>]*>75</);
+});
+
+test('declare screen offers exactly partnerCount(n) picks and only in-play cards', () => {
+  const html = r.renderScreen(ctxFixture({ trump: 'H', partnerPicks: ['AS'], view: { phase: 'declare', bidder: 0, bid: 90, turn: 0 } }));
+  assert.ok(html.includes('1 partner card'), 'asks for 1 partner card at 6 players');
+  assert.ok(html.includes('data-action="pick-trump"'));
+  assert.ok(!html.includes('data-card="2S"') && !html.includes('data-card="2D"'), 'removed cards not offered');
+  assert.ok(html.includes('data-card="AS"'));
+  assert.ok(html.includes('data-action="declare"'));
+});
+
+test('declare action is unavailable until trump and every partner card are chosen', () => {
+  const view = { phase: 'declare', bidder: 0, bid: 90, turn: 0 };
+  const incomplete = r.renderScreen(ctxFixture({ trump: 'H', partnerPicks: [], view }));
+  assert.ok(!incomplete.includes('data-action="declare"'));
+  const complete = r.renderScreen(ctxFixture({ trump: 'H', partnerPicks: ['AS'], view }));
+  assert.ok(complete.includes('data-action="declare"'));
+});
+
+test('when a bot is declaring, the user sees who won and no declare controls', () => {
+  const html = r.renderScreen(ctxFixture({ view: { phase: 'declare', bidder: 3, bid: 85, turn: 3 }, state: { userTurn: false } }));
+  assert.ok(html.includes(names[3]) && html.includes('85'));
+  assert.ok(!html.includes('data-action="declare"'));
+});
+
+test('result screen shows made/missed, bid, team points, team names, round change and total', () => {
+  const result = { team: [0, 3], teamPoints: 105, bid: 90, success: true, scores: [90, 0, 0, 90, 0, 0] };
+  const board = applyRound(newScoreboard(6), result.scores);
+  const html = r.renderScreen(ctxFixture({
+    screen: 'result', scoreboard: board,
+    view: { phase: 'done', bidder: 0, bid: 90, result },
+  }));
+  assert.ok(/made/i.test(html));
+  assert.ok(html.includes('105') && html.includes('90'));
+  assert.ok(html.includes(names[3]));
+  assert.ok(html.includes('+90'));
+  assert.ok(html.includes('data-action="next-round"') && html.includes('data-action="stop"'));
+  const missed = r.renderScreen(ctxFixture({
+    screen: 'result', scoreboard: board,
+    view: { phase: 'done', bidder: 2, bid: 100, result: { team: [2], teamPoints: 60, bid: 100, success: false, scores: [0, 0, -100, 0, 0, 0] } },
+  }));
+  assert.ok(/missed/i.test(missed) && missed.includes('-100'));
+});
+
+test('setup lists player counts and starts; a mismatch asks to reset', () => {
+  const plain = r.renderScreen(ctxFixture({ screen: 'setup' }));
+  for (const n of [5, 6, 7, 8, 9]) assert.ok(plain.includes(`data-n="${n}"`));
+  assert.ok(plain.includes('data-action="start"'));
+  assert.ok(!plain.includes('data-action="confirm-reset"'));
+  const mismatch = r.renderScreen(ctxFixture({ screen: 'setup', setup: { n: 7, savedMismatch: true } }));
+  assert.ok(mismatch.includes('data-action="confirm-reset"') && mismatch.includes('data-action="cancel-reset"'));
+  assert.ok(!mismatch.includes('data-action="start"'));
+});
+
+test('setup offers reset-scoreboard once rounds have been played', () => {
+  const fresh = r.renderScreen(ctxFixture({ screen: 'setup' }));
+  assert.ok(!fresh.includes('data-action="reset-scoreboard"'));
+  const played = r.renderScreen(ctxFixture({ screen: 'setup', scoreboard: applyRound(newScoreboard(6), [75, 0, 0, 75, 0, 0]) }));
+  assert.ok(played.includes('data-action="reset-scoreboard"'));
+});
