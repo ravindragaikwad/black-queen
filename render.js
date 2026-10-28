@@ -162,8 +162,13 @@
     let boardHtml = '';
     if (board.rounds > 0 && board.names.length === n) {
       const rows = board.names.map((name, i) => `<tr><td>${esc(name)}</td><td>${signed(board.totals[i])}</td></tr>`).join('');
-      boardHtml = `<h3>Scoreboard (${board.rounds} rounds)</h3><table>${rows}</table>` +
-        '<div class="row"><button class="btn ghost" data-action="reset-scoreboard">Reset scoreboard</button></div>';
+      const rounds = `${board.rounds} round${board.rounds === 1 ? '' : 's'}`;
+      const reset = ctx.setup.confirmScoreboardReset
+        ? `<p class="note">Erase the scoreboard (${rounds})? This cannot be undone.</p>` +
+          '<div class="row"><button class="btn" data-action="confirm-scoreboard-reset">Erase</button>' +
+          '<button class="btn ghost" data-action="cancel-scoreboard-reset">Cancel</button></div>'
+        : '<div class="row"><button class="btn ghost" data-action="reset-scoreboard">Reset scoreboard</button></div>';
+      boardHtml = `<h3>Scoreboard (${rounds})</h3><table>${rows}</table>${reset}`;
     }
     const action = savedMismatch
       ? `<p class="note">Your saved scoreboard is for ${board.names.length} players. Reset it to play with ${n}?</p>` +

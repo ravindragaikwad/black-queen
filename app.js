@@ -69,9 +69,10 @@
   }
 
   const actions = {
-    'set-players': (d) => { ctx.setup.n = Number(d.n); ctx.setup.savedMismatch = false; draw(); },
+    'set-players': (d) => { ctx.setup.n = Number(d.n); ctx.setup.savedMismatch = false; ctx.setup.confirmScoreboardReset = false; draw(); },
     start() {
       const n = ctx.setup.n;
+      ctx.setup.confirmScoreboardReset = false;
       if (board.names.length !== n) {
         if (board.rounds > 0) { ctx.setup.savedMismatch = true; draw(); return; }
         resetBoard(n);
@@ -80,7 +81,14 @@
     },
     'confirm-reset'() { ctx.setup.savedMismatch = false; resetBoard(ctx.setup.n); begin(ctx.setup.n); },
     'cancel-reset'() { ctx.setup.savedMismatch = false; ctx.setup.n = board.names.length; draw(); },
-    'reset-scoreboard'() { clearScoreboard(storage); resetBoard(ctx.setup.n); draw(); },
+    'reset-scoreboard'() { ctx.setup.confirmScoreboardReset = true; draw(); },
+    'cancel-scoreboard-reset'() { ctx.setup.confirmScoreboardReset = false; draw(); },
+    'confirm-scoreboard-reset'() {
+      ctx.setup.confirmScoreboardReset = false;
+      clearScoreboard(storage);
+      resetBoard(ctx.setup.n);
+      draw();
+    },
     'bid-step'(d) {
       const floor = nextBidFloor();
       ctx.bidAmount = Math.min(MAX_BID, Math.max(floor, (ctx.bidAmount || floor) + Number(d.delta)));

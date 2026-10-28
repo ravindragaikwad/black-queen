@@ -179,3 +179,14 @@ test('setup offers reset-scoreboard once rounds have been played', () => {
   const played = r.renderScreen(ctxFixture({ screen: 'setup', scoreboard: applyRound(newScoreboard(6), [75, 0, 0, 75, 0, 0]) }));
   assert.ok(played.includes('data-action="reset-scoreboard"'));
 });
+
+test('reset-scoreboard asks for confirmation before anything is cleared', () => {
+  const played = applyRound(newScoreboard(6), [75, 0, 0, 75, 0, 0]);
+  const asking = r.renderScreen(ctxFixture({
+    screen: 'setup', scoreboard: played, setup: { n: 6, savedMismatch: false, confirmScoreboardReset: true },
+  }));
+  assert.ok(asking.includes('data-action="confirm-scoreboard-reset"'));
+  assert.ok(asking.includes('data-action="cancel-scoreboard-reset"'));
+  assert.ok(!asking.includes('data-action="reset-scoreboard"'), 'the first-step button is replaced by the prompt');
+  assert.ok(asking.includes('1 round'), 'says how much would be lost');
+});
