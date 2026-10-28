@@ -225,3 +225,12 @@ test('cards in the current trick sit in front of the player who played them', ()
   assert.ok(played.every((t) => /style="left:[\d.]+%;top:[\d.]+%/.test(t)));
   assert.ok(html.includes('9♥') && html.includes('K♥'));
 });
+
+test('hand cards and played cards are drawn as card faces', () => {
+  const hand = r.renderHand(TEN, handOpts());
+  assert.equal((hand.match(/<svg class="face-svg/g) || []).length, 10);
+  const trick = [{ player: 2, card: '9H' }];
+  const html = r.renderScreen(ctxFixture({ view: { phase: 'play', bidder: 1, bid: 80, trump: 'S', partnerCards: ['AH'], trick } }));
+  assert.match(html, /<div class="trick-card[^>]*>\s*<span class="card mini[^>]*><svg class="face-svg/);
+  assert.ok(html.includes('aria-label="9♥"'));
+});

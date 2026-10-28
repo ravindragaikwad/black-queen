@@ -9,6 +9,7 @@ const FILES = [
   './bot.js',
   './scoreboard.js',
   './session.js',
+  './cards.js',
   './render.js',
   './app.js',
   './manifest.webmanifest',

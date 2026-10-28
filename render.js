@@ -4,6 +4,7 @@
 (function (root) {
   const bq = typeof require === 'function' ? require('./blackqueen') : root.BQ;
   const sbm = typeof require === 'function' ? require('./scoreboard') : root.BQ;
+  const { cardSvg } = typeof require === 'function' ? require('./cards') : root.BQ;
   const { fullDeck, legalCards, minBid, partnerCount, rankOf, suitOf, strength, SUITS, MAX_BID, BID_STEP } = bq;
 
   const SYMBOL = { S: '♠', H: '♥', D: '♦', C: '♣' };
@@ -14,7 +15,7 @@
   const label = (card) => rankOf(card) + SYMBOL[suitOf(card)];
   const colour = (card) => (suitOf(card) === 'H' || suitOf(card) === 'D' ? 'red' : 'black');
   const signed = (n) => (n > 0 ? `+${n}` : String(n));
-  const staticCard = (card) => `<span class="card mini ${colour(card)}">${label(card)}</span>`;
+  const staticCard = (card) => `<span class="card mini ${colour(card)}">${cardSvg(card)}</span>`;
 
   function renderHand(hand, { legal, selected, partnerCards, enabled }) {
     const sorted = hand.slice().sort(
@@ -31,10 +32,10 @@
       if (partnerCards.includes(card)) classes.push('partner-card');
       const attrs = `data-card="${card}"`;
       if (!enabled || !legal.includes(card)) {
-        return `<button class="${classes.join(' ')}" ${attrs} aria-disabled="true" tabindex="-1">${label(card)}</button>`;
+        return `<button class="${classes.join(' ')}" ${attrs} aria-disabled="true" tabindex="-1">${cardSvg(card)}</button>`;
       }
       const action = isSelected ? 'play' : 'select';
-      return `<button class="${classes.join(' ')}" ${attrs} data-action="${action}">${label(card)}</button>`;
+      return `<button class="${classes.join(' ')}" ${attrs} data-action="${action}">${cardSvg(card)}</button>`;
     };
     const rowsHtml = rows.map((row) => `<div class="hand-row">${row.map(cardHtml).join('')}</div>`).join('');
     return `<div class="hand${enabled ? '' : ' locked'}">${rowsHtml}</div>`;
