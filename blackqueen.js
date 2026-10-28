@@ -98,6 +98,7 @@ class Game {
     this.partnerCards = [];
     this.trick = [];
     this.lastTrick = null;
+    this.history = []; // every finished trick, in order (public, like the cards on the table)
     this.captured = Array(n).fill(0);
     this.won = Array.from({ length: n }, () => []); // every card each player has taken (public)
     this.revealed = new Set();
@@ -182,6 +183,7 @@ class Game {
     this.captured[winner] += trickPoints;
     this.won[winner].push(...this.trick.map((t) => t.card));
     this.lastTrick = { cards: this.trick, winner, points: trickPoints };
+    this.history.push(this.lastTrick);
     this.trick = [];
     if (this.hands.every((h) => h.length === 0)) return this._finish();
     this.turn = winner;
@@ -223,6 +225,7 @@ class Game {
       revealedPartners: [...this.revealed],
       trick: this.trick.slice(),
       lastTrick: this.lastTrick,
+      history: this.history.map((t) => ({ cards: t.cards.map((c) => ({ ...c })), winner: t.winner, points: t.points })),
       captured: this.captured.slice(),
       won: this.won.map((w) => w.slice()),
       allHands: this.phase === 'done' ? this.initialHands.map((h) => h.slice()) : null, // only once nothing is secret any more

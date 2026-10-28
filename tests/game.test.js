@@ -212,3 +212,31 @@ test('everyone\'s dealt hands are only revealed once the round is done', () => {
   randomPlay(g, rng);
   assert.deepEqual(g.viewFor(0).allHands, g.initialHands);
 });
+
+test('history lists every finished trick in order, with who played what and who won', () => {
+  const rng = seeded(51);
+  const g = new Game(5, { rng });
+  assert.deepEqual(g.viewFor(0).history, []);
+  randomBidding(g, rng);
+  randomDeclare(g, rng);
+  for (let t = 1; t <= 2; t++) {
+    const leader = g.turn;
+    for (let i = 0; i < g.n; i++) g.play(g.turn, g.legalCards(g.turn)[0]);
+    const h = g.viewFor(3).history;
+    assert.equal(h.length, t);
+    assert.equal(h[t - 1].cards.length, 5);
+    assert.equal(h[t - 1].cards[0].player, leader, 'leader first');
+    assert.equal(h[t - 1].winner, g.lastTrick.winner);
+  }
+});
+
+test('history is a copy: changing it does not change the game', () => {
+  const rng = seeded(52);
+  const g = new Game(5, { rng });
+  randomBidding(g, rng);
+  randomDeclare(g, rng);
+  for (let i = 0; i < g.n; i++) g.play(g.turn, g.legalCards(g.turn)[0]);
+  const v = g.viewFor(0);
+  v.history.pop();
+  assert.equal(g.viewFor(0).history.length, 1);
+});
