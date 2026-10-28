@@ -1,0 +1,107 @@
+/* Mobile first. Base styles are for a phone; the media query at the bottom widens it for desktop. */
+:root {
+  --bg: #f4f2ec;
+  --ink: #1d1d1f;
+  --mute: #6b6b70;
+  --panel: #ffffff;
+  --line: #d9d6cc;
+  --felt: #1f5c3f;
+  --gold: #e0a526;
+  --accent: #b3261e;
+  --card-w: 60px;
+  --card-h: 88px;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #151516; --ink: #f2f2f3; --mute: #9a9aa0; --panel: #222224; --line: #3a3a3e; }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.45 -apple-system, system-ui, "Segoe UI", sans-serif;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  overflow-x: hidden;
+}
+#app { max-width: 560px; margin: 0 auto; }
+.screen { padding: 12px; }
+h1, h2, h3 { margin: 8px 0; }
+.note { color: var(--mute); font-size: 14px; margin: 6px 0; }
+.info { font-size: 14px; margin: 4px 0 8px; }
+.status { text-align: center; font-weight: 600; min-height: 1.4em; margin: 6px 0; }
+
+.row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; justify-content: center; }
+.btn, .pill {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--ink);
+  color: var(--bg);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn.ghost, .pill { background: transparent; color: var(--ink); }
+.pill { padding: 0 10px; border-radius: 999px; }
+.pill.red { color: var(--accent); }
+.pill.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pill.own { border-style: dashed; }
+.pick-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+
+table { width: 100%; border-collapse: collapse; font-size: 15px; margin: 8px 0; }
+th, td { padding: 6px; border-bottom: 1px solid var(--line); text-align: right; }
+th:first-child, td:first-child { text-align: left; }
+
+/* Table */
+.seats { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; background: var(--felt); padding: 10px; border-radius: 12px; color: #fff; }
+.seat { background: rgba(0, 0, 0, .3); border-radius: 10px; padding: 6px 10px; min-width: 84px; text-align: center; font-size: 13px; }
+.seat.turn { outline: 2px solid var(--gold); }
+.seat em { display: block; font-style: normal; opacity: .8; }
+.badge { display: inline-block; margin-left: 4px; padding: 0 5px; border-radius: 4px; font-size: 10px; text-transform: uppercase; background: rgba(255, 255, 255, .25); }
+.badge-partner { background: var(--gold); color: #1d1d1f; }
+
+.trick { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-height: 84px; margin: 10px 0; }
+.trick-card { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; padding: 2px; border-radius: 8px; }
+.trick-card.winner { outline: 2px solid var(--gold); }
+
+/* Cards */
+.card {
+  display: inline-grid; place-items: center;
+  width: var(--card-w); height: var(--card-h);
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid #b9b9b9;
+  background: #fff;
+  color: #111;
+  font: 700 20px/1 -apple-system, system-ui, sans-serif;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+.card.red { color: #c0262b; }
+.card.mini { width: 40px; height: 56px; font-size: 15px; cursor: default; }
+.hand { margin: 8px 0; }
+.hand-row { display: flex; justify-content: center; gap: 6px; margin: 6px 0; }
+.hand:not(.locked) .card[aria-disabled="true"] { opacity: .35; cursor: not-allowed; }
+.card.selected { transform: translateY(-10px); box-shadow: 0 0 0 3px var(--gold); }
+.card { position: relative; }
+.card.partner-card { outline: 2px dashed var(--gold); outline-offset: -5px; }
+.card.partner-card::after { content: "★"; position: absolute; top: 2px; right: 4px; font-size: 12px; color: var(--gold); }
+
+.bid-controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; margin: 8px 0; }
+.bid-amount { min-width: 48px; text-align: center; font-size: 22px; font-weight: 700; }
+
+/* Desktop: same flow, larger cards, hand on a single line */
+@media (min-width: 900px) {
+  :root { --card-w: 76px; --card-h: 112px; }
+  #app { max-width: 960px; }
+  .screen { padding: 24px; }
+  .hand { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .hand-row { display: contents; }
+  .card { font-size: 24px; }
+  .card.mini { width: 48px; height: 68px; font-size: 18px; }
+}
