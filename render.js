@@ -206,10 +206,10 @@
       (k) => `<button class="pill${k === n ? ' on' : ''}" data-action="set-players" data-n="${k}">${k}</button>`,
     ).join('');
     const level = ctx.level || 'smart';
-    const levels = [['easy', 'Easy'], ['smart', 'Smart']].map(
+    const levels = [['easy', 'Easy'], ['medium', 'Medium'], ['smart', 'Smart']].map(
       ([id, text]) => `<button class="pill${id === level ? ' on' : ''}" data-action="set-level" data-level="${id}">${text}</button>`,
     ).join('');
-    const botLabel = level === 'smart' ? 'Smart bot' : 'Easy bot';
+    const botLabel = { easy: 'Easy bot', medium: 'Medium bot', smart: 'Smart bot' }[level] || 'Bot';
     const seatRows = sbm.botNames(n).map((name, i) => `<tr><td>${i + 1}. ${esc(name)}</td><td>${i === 0 ? 'Human' : botLabel}</td></tr>`).join('');
     const board = ctx.scoreboard;
     let boardHtml = '';

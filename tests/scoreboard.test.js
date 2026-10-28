@@ -83,6 +83,8 @@ test('bot level: defaults to smart, saves and restores the choice, ignores junk'
   assert.equal(sb.loadLevel(storage), 'smart');
   assert.equal(sb.saveLevel(storage, 'easy'), true);
   assert.equal(sb.loadLevel(storage), 'easy');
+  assert.equal(sb.saveLevel(storage, 'medium'), true);
+  assert.equal(sb.loadLevel(storage), 'medium');
   assert.equal(sb.saveLevel(storage, 'smart'), true);
   assert.equal(sb.loadLevel(storage), 'smart');
   assert.equal(sb.saveLevel(storage, 'genius'), false, 'unknown levels are refused');

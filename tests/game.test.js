@@ -21,14 +21,27 @@ test('deal removes lowest cards first and deals floor(52/n)', () => {
   }
 });
 
-test('points total 235 for every n', () => {
+test('points total 125 for every n (aces, tens, fives and the queen of spades only)', () => {
   for (let n = 5; n <= 9; n++) {
     const d = deal(n, seeded(n));
     const all = [...d.hands.flat(), ...d.removed];
-    assert.equal(all.reduce((s, c) => s + points(c), 0), 235);
+    assert.equal(all.reduce((s, c) => s + points(c), 0), 125);
     assert.equal(all.length, 52);
   }
-  assert.equal(fullDeck().reduce((s, c) => s + points(c), 0), 235);
+  assert.equal(fullDeck().reduce((s, c) => s + points(c), 0), 125);
+});
+
+test('only aces, tens, fives and the queen of spades score; kings, jacks and other queens are worth nothing', () => {
+  for (const suit of ['S', 'H', 'D', 'C']) {
+    assert.equal(points('A' + suit), 10);
+    assert.equal(points('10' + suit), 10);
+    assert.equal(points('5' + suit), 5);
+    assert.equal(points('K' + suit), 0, `K${suit}`);
+    assert.equal(points('J' + suit), 0, `J${suit}`);
+    for (const r of ['2', '3', '4', '6', '7', '8', '9']) assert.equal(points(r + suit), 0);
+  }
+  assert.equal(points('QS'), 25);
+  for (const suit of ['H', 'D', 'C']) assert.equal(points('Q' + suit), 0, `Q${suit}`);
 });
 
 test('125 ends bidding immediately', () => {
@@ -162,7 +175,7 @@ test('1000 random full games finish with correct totals and scores', () => {
     const n = 5 + Math.floor(rng() * 5);
     const g = randomGame(n, rng);
     assert.equal(g.phase, 'done');
-    assert.equal(g.captured.reduce((a, b) => a + b, 0), 235);
+    assert.equal(g.captured.reduce((a, b) => a + b, 0), 125);
     const holders = g.partnerCards.map((c) => g.initialHands.findIndex((h) => h.includes(c)));
     const team = [...new Set([g.bidder, ...holders])];
     const teamPoints = team.reduce((s, p) => s + g.captured[p], 0);

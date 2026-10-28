@@ -258,17 +258,18 @@ const tileFor = (html, seat) => (html.match(new RegExp(`<div class="seat[^>]*dat
 const playView = { phase: 'play', bidder: 1, bid: 80, trump: 'S', partnerCards: ['AH'] };
 
 test('under a player\'s name: the point cards they have won, but not worthless cards', () => {
-  const won = [[], [], ['10C', '3D', 'KH'], [], [], []];
+  const won = [[], [], ['10C', '3D', 'AH', 'KH'], [], [], []];
   const html = r.renderScreen(ctxFixture({ view: { ...playView, won, captured: [0, 0, 20, 0, 0, 0] } }));
   const tile = tileFor(html, 2);
-  assert.ok(tile.includes('10♣') && tile.includes('K♥'), 'point cards shown');
+  assert.ok(tile.includes('10♣') && tile.includes('A♥'), 'point cards shown');
+  assert.ok(!tile.includes('K♥'), 'kings are worth nothing, so not listed');
   assert.ok(!tile.includes('3♦'), 'worthless cards are not listed');
   assert.ok(tile.includes('20 pts'), 'total still shown');
   assert.ok(!tileFor(html, 3).includes('won-chip'), 'nothing for a player who has won nothing');
 });
 
 test('a long list of won point cards is shortened to four plus a count', () => {
-  const won = [[], [], ['AH', 'KH', 'QH', 'JH', '10H', '5H'], [], [], []];
+  const won = [[], [], ['AH', 'AS', 'AD', 'AC', '10H', '5H'], [], [], []];
   const tile = tileFor(r.renderScreen(ctxFixture({ view: { ...playView, won } })), 2);
   assert.equal((tile.match(/class="won-chip/g) || []).length, 4);
   assert.ok(tile.includes('+2'));
@@ -295,7 +296,7 @@ const reviewHands = [
 ];
 const doneView = {
   phase: 'done', bidder: 1, bid: 90, trump: 'H', partnerCards: ['AD'], revealedPartners: [2], handSizes: [0, 0, 0, 0, 0, 0],
-  allHands: reviewHands, won: [[], ['AH', 'KH'], ['10C'], [], [], []], captured: [0, 20, 10, 0, 0, 0],
+  allHands: reviewHands, won: [[], ['AH', '10H'], ['10C'], [], [], []], captured: [0, 20, 10, 0, 0, 0],
   result: { team: [1, 2], teamPoints: 30, bid: 90, success: false, scores: [0, -90, 0, 0, 0, 0] },
 };
 
@@ -315,15 +316,19 @@ test('result screen can go back to the table and lists the point cards each play
   assert.ok(html.includes('data-action="view-table"'));
   assert.ok(html.includes('data-action="next-round"'));
   const row = (html.match(/<tr><td>Asha[^]*?<\/tr>/) || [''])[0];
-  assert.ok(row.includes('A♥') && row.includes('K♥'), 'Won column lists the cards');
+  assert.ok(row.includes('A♥') && row.includes('10♥'), 'Won column lists the cards');
 });
 
 test('setup lets the player choose the bot level, smart by default', () => {
   const html = r.renderScreen(ctxFixture({ screen: 'setup' }));
   assert.match(html, /data-action="set-level" data-level="easy"/);
+  assert.match(html, /data-action="set-level" data-level="medium"/);
   assert.match(html, /class="pill on" data-action="set-level" data-level="smart"/);
   const easy = r.renderScreen(ctxFixture({ screen: 'setup', level: 'easy' }));
   assert.match(easy, /class="pill on" data-action="set-level" data-level="easy"/);
   assert.match(easy, /class="pill" data-action="set-level" data-level="smart"/);
+  const medium = r.renderScreen(ctxFixture({ screen: 'setup', level: 'medium' }));
+  assert.match(medium, /class="pill on" data-action="set-level" data-level="medium"/);
+  assert.ok(medium.includes('Medium bot'));
   assert.ok(html.includes('Bot level'));
 });

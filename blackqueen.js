@@ -20,7 +20,7 @@ const strength = (id) => {
 function points(id) {
   if (id === 'QS') return 25;
   const r = rankOf(id);
-  if (['J', 'Q', 'K', 'A', '10'].includes(r)) return 10;
+  if (r === 'A' || r === '10') return 10; // kings, jacks and the other queens are worth nothing
   if (r === '5') return 5;
   return 0;
 }

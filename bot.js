@@ -5,13 +5,16 @@
   const { SUITS, MAX_BID, BID_STEP, points, suitOf, strength, fullDeck, partnerCount, minBid, legalCards, trickWinner } = bq;
 
   const suitCounts = (hand) => SUITS.map((s) => ({ suit: s, count: hand.filter((c) => suitOf(c) === s).length }));
+  // Only 125 points exist (aces, tens, fives, queen of spades), so what the bot expects its team to add
+  // on top of its own cards depends on how many seats share the rest of the table.
+  const BID_BASE = { 5: 45, 6: 45, 7: 48, 8: 50, 9: 53 };
   const handPoints = (hand) => hand.reduce((s, c) => s + points(c), 0);
 
   // Bid the lowest legal amount while the hand looks strong enough to carry it.
   function botBid(view) {
     const hand = view.yourHand;
     const longest = Math.max(...suitCounts(hand).map((s) => s.count));
-    const estimate = handPoints(hand) + 30 + 4 * Math.max(0, longest - 3);
+    const estimate = handPoints(hand) + BID_BASE[view.n] + 4 * Math.max(0, longest - 3);
     const willing = Math.min(MAX_BID, Math.floor(estimate / BID_STEP) * BID_STEP);
     const floor = view.highBid === null ? minBid(view.n) : view.highBid + BID_STEP;
     if (floor <= willing) return { action: 'bid', amount: floor };

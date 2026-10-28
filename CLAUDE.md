@@ -6,7 +6,7 @@ A web-first card game (Black Queen) for 5+ players, built as a PWA, with a possi
 - `rules.md`: the agreed rules spec. Read this first.
 - `blackqueen.js`: pure JS game logic (no dependencies, works in Node and browsers via the `BQ` global). Main class: `Game`; pure helpers `legalCards`, `trickWinner`, `scoreRound`.
 - `bot.js`: easy bot (`botBid`, `botDeclare`, `botPlay`), uses only `Game.viewFor(seat)`.
-- `smart.js`: smart bot, same API (`smartBots`). Counts cards from the public trick history, tracks who is void, knows its role (bidder/partner/opponent), leads sure winners, feeds points to a teammate who is winning, picks its bid to maximise expected score (calibrated by simulation, see `CALIBRATION`), names strong partner cards. Setup lets the player pick Easy or Smart (default Smart, saved on the device). `node tools/tournament.js` compares them; smart beats easy by roughly 8 to 16 points per seat per round.
+- `smart.js`: smart bot, same API (`smartBots`). Counts cards from the public trick history, tracks who is void, knows its role (bidder/partner/opponent), leads sure winners, feeds points to a teammate who is winning, picks its bid to maximise expected score (calibrated by simulation, see `CALIBRATION`), names strong partner cards. `mediumBots` (in smart.js): easy bidding, smart partner calling, sensible but uncoordinated play. Setup lets the player pick Easy, Medium or Smart (default Smart, saved on the device). `node tools/tournament.js` ranks the three at one table. Bot tuning (`CALIBRATION`, per-table-size `margin`/`minEv`) was measured under the 125-point rules; redo it (see git history for the method) if the points ever change again.
 - `scoreboard.js`: running totals saved on the device (localStorage), fixed bot names.
 - `session.js`: `Session` drives one round: user is seat 0, bots on timers, 1.5 s pause after each trick.
 - `cards.js`: card faces as inline SVG (`cardSvg`). `sound.js`: synthesised sounds + mute. `fx.js`: `cues` (which sound/animation a state change needs), `createFx` (GSAP/confetti wrapper). `vendor/`: bundled GSAP and canvas-confetti (see vendor/NOTICE.md).
@@ -17,7 +17,7 @@ A web-first card game (Black Queen) for 5+ players, built as a PWA, with a possi
 
 ## Decisions made (by the user)
 - Minimum 5 players, no fixed maximum. Cards per player = floor(52 / players); leftover cards are removed, lowest first (2s, then 3s, then 4s). Removal order: 2D 2C 2H 2S 3D 3C 3H 3S 4D 4C 4H 4S.
-- Points: A, K, Q, J, 10 = 10 each; 5 = 5; Queen of Spades = 25. Total is 235 and never changes when cards are removed.
+- Points (changed 2026-10-28 by the user: no points on picture cards except A and the Queen of Spades): A = 10, 10 = 10, 5 = 5, Queen of Spades = 25; K, J and other Qs = 0. Total is 125 (equal to the max bid) and never changes when cards are removed.
 - Max bid 125, step 5. Min bid 70 with 5 players, 75 with 6 or more.
 - First bidder is random, then clockwise. Each bid must beat the last, and passing is final.
 - Bid winner picks trump and names specific partner cards (they may name a card they hold themselves).
@@ -43,7 +43,7 @@ A web-first card game (Black Queen) for 5+ players, built as a PWA, with a possi
 None on scoring or play.
 
 ## Status
-Live on GitHub Pages: https://ravindragaikwad.github.io/black-queen/ (push needs the gh credential workaround and the user's go-ahead). Round end: the table stays up with a "Round complete" review (everyone's dealt cards revealed, point cards won shown under each name) and a button on to the result. Easy/Smart bot level. Casino table look, SVG card faces, GSAP animations, synthesised sounds with mute, and confetti on a win are built.
+Live on GitHub Pages: https://ravindragaikwad.github.io/black-queen/ (push needs the gh credential workaround and the user's go-ahead). Round end: the table stays up with a "Round complete" review (everyone's dealt cards revealed, point cards won shown under each name) and a button on to the result. Easy/Medium/Smart bot level. Casino table look, SVG card faces, GSAP animations, synthesised sounds with mute, and confetti on a win are built.
 
 ## Next
 1. A harder bot: guess which unrevealed seat is the partner, and play the end of the round for the exact bid.

@@ -1,4 +1,4 @@
-# Black Queen: Rules Spec (v1.0, confirmed)
+# Black Queen: Rules Spec (v1.1, confirmed)
 
 ## Players and dealing
 - Minimum 5 players. Maximum 17 with this removal scheme (more would need 5s removed).
@@ -14,12 +14,12 @@
 | 8 | 6 | all 2s |
 | 9 | 5 | all 2s + 3D 3C 3H |
 
-## Points (235 total, never changes as removed cards are worth 0)
-- A, K, Q, J = 10 each
+## Points (125 total, never changes as removed cards are worth 0)
+- Aces = 10 each (40 in all)
+- 10s = 10 each (40 in all)
+- 5s = 5 each (20 in all)
 - Queen of Spades = 25
-- 10 = 10
-- 5 = 5
-- All others = 0
+- Kings, jacks and every other queen are worth nothing, and so are all other cards. The total equals the maximum bid of 125.
 
 ## Bidding
 - First bidder chosen at random, then clockwise.

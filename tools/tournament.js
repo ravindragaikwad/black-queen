@@ -1,9 +1,10 @@
 'use strict';
-// Plays smart bots against easy bots at the same table and prints who scores more.
+// Plays the three bot levels against each other at the same table and prints who scores more.
+// Seats rotate between easy, medium and smart every game, so seat position cannot decide it.
 // Usage: node tools/tournament.js [games per table size, default 3000]
 const bq = require('../blackqueen');
 const easy = require('../bot');
-const { smartBots } = require('../smart');
+const { mediumBots, smartBots } = require('../smart');
 
 function seeded(seed) {
   return () => {
@@ -33,17 +34,16 @@ function playGame(n, botFor, rng) {
 }
 
 const games = Number(process.argv[2]) || 3000;
-console.log(`Smart vs easy bots, ${games} games per table size (average score per seat per round)`);
+const levels = [['easy', easy], ['medium', mediumBots], ['smart', smartBots]];
+console.log(`Easy vs medium vs smart bots, ${games} games per table size (average score per seat per round)`);
 for (const n of [5, 6, 7, 8, 9]) {
   const rng = seeded(100 + n);
-  let smart = 0, simple = 0, smartSeats = 0, simpleSeats = 0;
+  const sum = [0, 0, 0];
+  const seats = [0, 0, 0];
   for (let i = 0; i < games; i++) {
-    const smartOnEven = i % 2 === 0; // swap which seats are smart so seat position cannot decide it
-    const isSmart = (seat) => (seat % 2 === 0) === smartOnEven;
-    const g = playGame(n, (seat) => (isSmart(seat) ? smartBots : easy), rng);
-    g.result.scores.forEach((s, seat) => {
-      if (isSmart(seat)) { smart += s; smartSeats++; } else { simple += s; simpleSeats++; }
-    });
+    const level = (seat) => (seat + i) % 3;
+    const g = playGame(n, (seat) => levels[level(seat)][1], rng);
+    g.result.scores.forEach((s, seat) => { sum[level(seat)] += s; seats[level(seat)]++; });
   }
-  console.log(`${n} players: smart ${(smart / smartSeats).toFixed(1)}  easy ${(simple / simpleSeats).toFixed(1)}`);
+  console.log(`${n} players: ` + levels.map(([name], k) => `${name} ${(sum[k] / seats[k]).toFixed(1)}`).join('  '));
 }

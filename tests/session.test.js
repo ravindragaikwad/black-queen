@@ -124,14 +124,14 @@ test('completed trick is held with winner and points, input is refused, then it 
   assert.equal(after.paused, false);
 });
 
-test('a full game with the user playing the first legal card ends done with 235 captured', () => {
+test('a full game with the user playing the first legal card ends done with 125 captured', () => {
   for (const n of [5, 9]) {
     const { session, sched } = make({ n, rng: seeded(30 + n) });
     session.start();
     playOut(session, sched);
     const s = session.state();
     assert.equal(s.view.phase, 'done', `n=${n}`);
-    assert.equal(s.view.captured.reduce((a, b) => a + b, 0), 235);
+    assert.equal(s.view.captured.reduce((a, b) => a + b, 0), 125);
     assert.ok(s.view.result);
   }
 });

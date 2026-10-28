@@ -88,7 +88,7 @@ test('games played only by bots finish', () => {
       g.play(seat, bot.botPlay(g.viewFor(seat))); // throws on an illegal card
     }
     assert.equal(g.phase, 'done');
-    assert.equal(g.captured.reduce((a, b) => a + b, 0), 235);
+    assert.equal(g.captured.reduce((a, b) => a + b, 0), 125);
     assert.ok(points('QS') === 25);
   }
 });

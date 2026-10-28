@@ -9,9 +9,9 @@
 
   const DEFAULT_PARAMS = {
     // bidding: shave `margin` points off the estimate, stretch its spread by `sigmaScale`, and only bid for `minEv` or more
-    margin: 15, sigmaScale: 1, minEv: 0,
+    margin: { default: 0, 9: 8 }, sigmaScale: 1, minEv: { default: 10, 5: -10, 6: -10 },
     // play
-    feedAlive: 0.65, trumpLead: 3,
+    feedAlive: 0.65, trumpLead: 4,
   };
 
   const HONOUR = { A: 6, K: 4.5, Q: 3.5, J: 2.5, 10: 2, 9: 1.5, 8: 1 };
@@ -101,15 +101,16 @@
     return alive;
   }
 
-  // Measured by simulation (12,000 random deals per table size, every seat playing this bot):
+  // Measured by simulation (12,000 random deals per table size, every seat playing this bot, 125 points in the game):
   // team points ~ w0 + w1*handPoints + w2*trumpPower + w3*sideAces, with spread sigma.
   const CALIBRATION = {
-    5: { w: [92.186, 0.068, 3.113, 11.458], sigma: 38 },
-    6: { w: [85.391, -0.01, 4.212, 12.884], sigma: 39.4 },
-    7: { w: [131.9, -0.02, 3.116, 7.114], sigma: 42.1 },
-    8: { w: [132.604, 0.078, 2.449, 5.549], sigma: 44.1 },
-    9: { w: [158.535, 0.077, 1.345, 3.072], sigma: 44.9 },
+    5: { w: [47.469, 0.125, 1.672, 7.823], sigma: 23.3 },
+    6: { w: [44.404, 0.075, 2.154, 6.984], sigma: 24.5 },
+    7: { w: [68.46, 0.046, 1.796, 3.241], sigma: 25.2 },
+    8: { w: [69.259, 0.052, 1.585, 1.971], sigma: 26.4 },
+    9: { w: [84.128, 0.027, 0.997, 0.777], sigma: 25.9 },
   };
+
 
   // Standard normal cumulative distribution (Abramowitz and Stegun 7.1.26).
   function normalCdf(z) {
@@ -118,6 +119,9 @@
     const erf = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
     return z >= 0 ? 0.5 * (1 + erf) : 0.5 * (1 - erf);
   }
+
+  // A setting can be one number or a table of numbers by player count, with a `default`.
+  const forTable = (setting, n) => (typeof setting === 'object' ? (n in setting ? setting[n] : setting.default) : setting);
 
   function createBots(params = DEFAULT_PARAMS) {
     const P = { ...DEFAULT_PARAMS, ...params };
@@ -129,7 +133,7 @@
       const best = bestTrump(hand);
       const sideAces = hand.filter((c) => rankOf(c) === 'A' && suitOf(c) !== best.s).length;
       const cal = CALIBRATION[view.n];
-      const mean = cal.w[0] + cal.w[1] * handPoints(hand) + cal.w[2] * best.power + cal.w[3] * sideAces - P.margin;
+      const mean = cal.w[0] + cal.w[1] * handPoints(hand) + cal.w[2] * best.power + cal.w[3] * sideAces - forTable(P.margin, view.n);
       const sigma = cal.sigma * P.sigmaScale;
       const floor = view.highBid === null ? minBid(view.n) : view.highBid + BID_STEP;
       let pick = null;
@@ -138,7 +142,7 @@
         const ev = amount * (2 * made - 1);
         if (pick === null || ev > pick.ev) pick = { amount, ev };
       }
-      return pick && pick.ev > P.minEv ? { action: 'bid', amount: pick.amount } : { action: 'pass' };
+      return pick && pick.ev > forTable(P.minEv, view.n) ? { action: 'bid', amount: pick.amount } : { action: 'pass' };
     }
 
     // Trump is the strongest suit; ask for the cards that win tricks and that the bot does not hold.
@@ -218,7 +222,15 @@
   }
 
   const smartBots = createBots();
-  const api = { smartBots, createBots, DEFAULT_PARAMS, helpers: { unseenCards, voidSuits, roleOf, sideOf, survival, trumpPower, bestTrump, handPoints } };
+
+  // Medium: bids like the easy bot, but names smart partner cards and plays sensibly (cashes sure winners,
+  // takes tricks cheaply, never throws points to opponents). It does not coordinate with teammates: no feeding
+  // points to a winning partner and no drawing trumps, which is what the smart bot adds.
+  const easyBots = typeof require === 'function' ? require('./bot') : root.BQ;
+  const uncoordinated = createBots({ feedAlive: 2, trumpLead: 99 });
+  const mediumBots = { botBid: easyBots.botBid, botDeclare: smartBots.botDeclare, botPlay: uncoordinated.botPlay };
+
+  const api = { smartBots, mediumBots, createBots, DEFAULT_PARAMS, helpers: { unseenCards, voidSuits, roleOf, sideOf, survival, trumpPower, bestTrump, handPoints } };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.BQ = Object.assign(root.BQ || {}, api);
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -1,7 +1,7 @@
 'use strict';
 // DOM wiring: one click listener dispatching on data-action, state kept in ctx, HTML from render.js.
 (function (root) {
-  const { Session, renderScreen, botNames, newScoreboard, applyRound, saveScoreboard, loadScoreboard, clearScoreboard, loadLevel, saveLevel, smartBots,
+  const { Session, renderScreen, botNames, newScoreboard, applyRound, saveScoreboard, loadScoreboard, clearScoreboard, loadLevel, saveLevel, smartBots, mediumBots,
     minBid, partnerCount, MAX_BID, BID_STEP, cues, createFx, createSound } = root.BQ;
 
   function deviceStorage() {
@@ -102,7 +102,7 @@
     prevState = null;
     flyFrom = null;
     ctx.screen = 'game';
-    session = new Session({ n, onChange: onSessionChange, bots: ctx.level === 'smart' ? smartBots : undefined });
+    session = new Session({ n, onChange: onSessionChange, bots: { easy: undefined, medium: mediumBots, smart: smartBots }[ctx.level] });
     session.start();
   }
 

@@ -3,7 +3,7 @@
 (function (root) {
   const KEY = 'blackqueen.scoreboard.v1';
   const LEVEL_KEY = 'blackqueen.level.v1';
-  const LEVELS = ['easy', 'smart'];
+  const LEVELS = ['easy', 'medium', 'smart'];
   const BOT_NAMES = ['Asha', 'Dev', 'Mira', 'Kabir', 'Zoya', 'Rohan', 'Priya', 'Sam'];
 
   const botNames = (n) => ['You', ...BOT_NAMES].slice(0, n);

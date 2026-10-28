@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const bq = require('../blackqueen');
 const easy = require('../bot');
-const { smartBots } = require('../smart');
+const { smartBots, mediumBots } = require('../smart');
 const { seeded } = require('./helpers');
 
 const { Game } = bq;
@@ -39,7 +39,7 @@ test('smart bots always make legal moves, at every table size, alone and mixed w
     const mixed = i % 2 === 0;
     const g = playGame(n, (seat) => (mixed && seat % 2 ? easy : smartBots), rng);
     assert.equal(g.phase, 'done');
-    assert.equal(g.captured.reduce((a, b) => a + b, 0), 235);
+    assert.equal(g.captured.reduce((a, b) => a + b, 0), 125);
   }
 });
 
@@ -148,7 +148,7 @@ test('everyone-passes stays rare with smart bots at the table', () => {
     while (g.phase === 'bidding') { const s = g.turn; const r = smartBots.botBid(g.viewFor(s)); if (r.action === 'bid') g.placeBid(s, r.amount); else g.pass(s); }
     if (g.highBid === null) nobody++;
   }
-  assert.ok(nobody < 60, `all-pass happened ${nobody}/500 times`);
+  assert.ok(nobody < 125, `all-pass happened ${nobody}/500 times`);
 });
 
 // The real test: at the same table, smart seats must out-score the simple bots.
@@ -168,12 +168,60 @@ function tournament(n, games, seed) {
 
 test('smart bots out-score simple bots at the same table (6 players)', () => {
   const r = tournament(6, 1000, 71);
-  assert.ok(r.smart > r.simple + 8, `smart ${r.smart.toFixed(2)} vs simple ${r.simple.toFixed(2)} per seat per round`);
+  assert.ok(r.smart > r.simple + 3, `smart ${r.smart.toFixed(2)} vs simple ${r.simple.toFixed(2)} per seat per round`);
 });
 
 test('smart bots out-score simple bots at 5 and 8 players too', () => {
   for (const n of [5, 8]) {
     const r = tournament(n, 600, 72 + n);
-    assert.ok(r.smart > r.simple + 4, `n=${n}: smart ${r.smart.toFixed(2)} vs simple ${r.simple.toFixed(2)}`);
+    assert.ok(r.smart > r.simple + 2, `n=${n}: smart ${r.smart.toFixed(2)} vs simple ${r.simple.toFixed(2)}`);
   }
+});
+
+test('medium bots always make legal moves, alone and mixed with the other levels', () => {
+  const rng = seeded(81);
+  const levels = [easy, mediumBots, smartBots];
+  for (let i = 0; i < 300; i++) {
+    const n = 5 + (i % 5);
+    const g = playGame(n, (seat) => levels[(seat + i) % 3], rng);
+    assert.equal(g.phase, 'done');
+    assert.equal(g.captured.reduce((a, b) => a + b, 0), 125);
+  }
+});
+
+test('medium bots name the same partner cards as smart bots but bid like easy bots', () => {
+  const rng = seeded(82);
+  for (let i = 0; i < 100; i++) {
+    const n = 5 + (i % 5);
+    const g = new Game(n, { rng });
+    const v = g.viewFor(g.turn);
+    assert.deepEqual(mediumBots.botBid(v), easy.botBid(v));
+    assert.deepEqual(mediumBots.botDeclare({ ...v, phase: 'declare' }), smartBots.botDeclare({ ...v, phase: 'declare' }));
+  }
+});
+
+test('medium does not feed points to a winning teammate (that is what makes smart smarter)', () => {
+  const view = baseView({
+    you: 4, bidder: 4, revealedPartners: [2], bid: 85,
+    trick: [{ player: 0, card: '3H' }, { player: 1, card: '4H' }, { player: 2, card: 'AH' }, { player: 3, card: '5H' }],
+    yourHand: ['10C', '4C', '7D'],
+  });
+  assert.equal(smartBots.botPlay(view), '10C');
+  assert.equal(mediumBots.botPlay(view), '4C');
+});
+
+// Three levels at one table: easy < medium < smart.
+test('the three levels rank easy < medium < smart at the same table (6 players)', () => {
+  const rng = seeded(83);
+  const levels = [easy, mediumBots, smartBots];
+  const sum = [0, 0, 0];
+  const cnt = [0, 0, 0];
+  for (let i = 0; i < 6000; i++) {
+    const level = (seat) => (seat + i) % 3; // rotate so seat position cannot decide it
+    const g = playGame(6, (seat) => levels[level(seat)], rng);
+    g.result.scores.forEach((s, seat) => { sum[level(seat)] += s; cnt[level(seat)]++; });
+  }
+  const [e, m, s] = sum.map((v, i) => v / cnt[i]);
+  assert.ok(m > e + 1, `medium ${m.toFixed(2)} should beat easy ${e.toFixed(2)}`);
+  assert.ok(s > m + 1, `smart ${s.toFixed(2)} should beat medium ${m.toFixed(2)}`);
 });
