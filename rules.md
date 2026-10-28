@@ -1,4 +1,4 @@
-# Black Queen: Rules Spec (v0.1)
+# Black Queen: Rules Spec (v1.0, confirmed)
 
 ## Players and dealing
 - Minimum 5 players. Maximum 17 with this removal scheme (more would need 5s removed).
@@ -35,7 +35,7 @@
 - Partner cards are specific cards (e.g. "AH"). The bidder may name a card they hold.
 - Partner cards must be in play (not removed).
 
-## Play (ASSUMED, please confirm)
+## Play
 - Bidder leads the first trick.
 - Must follow the led suit if able.
 - Highest trump wins; if no trump, highest card of the led suit wins.
@@ -45,5 +45,7 @@
 - Bidding team = bidder + holders of the partner cards.
 - Success if the team's captured points >= the bid.
 
-## Scoring (PLACEHOLDER, please confirm)
-- Success: each team member +bid. Failure: bidder -bid, others 0.
+## Scoring
+- Success (team points >= bid, equal counts): the bidder and each partner get +bid, opponents get 0. If the bidder holds every named partner card they play alone and get +bid once.
+- Failure: the bidder gets -bid. Partners and opponents get 0.
+- There is no end condition: running totals continue until the group stops.
