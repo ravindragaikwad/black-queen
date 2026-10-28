@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Black Queen: flow and screens</title>
+<style>
+  :root { --bg:#f6f5f1; --card:#fff; --ink:#1d1d1f; --mute:#6b6b70; --line:#dcdad2; --felt:#1f5c3f; --accent:#b3261e; --gold:#c8922a; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161617; --card:#222224; --ink:#f2f2f3; --mute:#9a9aa0; --line:#3a3a3e; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 -apple-system,system-ui,sans-serif; padding:24px 16px 64px; }
+  main { max-width:980px; margin:0 auto; }
+  h1 { font-size:26px; margin:0 0 4px; }
+  h2 { font-size:18px; margin:40px 0 12px; }
+  .sub { color:var(--mute); margin:0 0 8px; }
+
+  /* flow */
+  .flow { display:flex; flex-wrap:wrap; gap:10px; align-items:stretch; }
+  .step { flex:1 1 140px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; position:relative; }
+  .step b { display:block; margin-bottom:4px; }
+  .step small { color:var(--mute); display:block; }
+  .num { display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; background:var(--ink); color:var(--bg); font-size:12px; margin-right:6px; }
+  .loop { margin-top:10px; padding:10px 12px; border:1px dashed var(--line); border-radius:10px; color:var(--mute); }
+
+  /* screens */
+  .screens { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; }
+  .screen { background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  .screen > h3 { margin:0; padding:10px 14px; font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--mute); border-bottom:1px solid var(--line); }
+  .body { padding:14px; }
+  .table { background:var(--felt); border-radius:12px; color:#fff; padding:12px; }
+  .seats { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+  .seat { background:rgba(0,0,0,.28); border-radius:10px; padding:6px 10px; min-width:84px; text-align:center; font-size:12px; }
+  .seat.turn { outline:2px solid var(--gold); }
+  .seat em { display:block; font-style:normal; opacity:.75; }
+  .trick { display:flex; gap:8px; justify-content:center; margin:14px 0; }
+  .hand { display:flex; flex-wrap:wrap; gap:4px; justify-content:center; margin-top:10px; }
+  .c { background:#fff; color:#111; border-radius:6px; width:38px; height:54px; display:grid; place-items:center; font-weight:700; font-size:14px; border:1px solid #bbb; }
+  .c.r { color:#c0262b; }
+  .c.dim { opacity:.35; }
+  .c.pick { transform:translateY(-6px); box-shadow:0 0 0 2px var(--gold); }
+  .row { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0; }
+  .btn { background:var(--ink); color:var(--bg); border-radius:8px; padding:7px 12px; font-size:13px; }
+  .btn.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); }
+  .pill { border:1px solid var(--line); border-radius:999px; padding:3px 10px; font-size:12px; }
+  .pill.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  td,th { padding:5px 6px; border-bottom:1px solid var(--line); text-align:right; }
+  td:first-child,th:first-child { text-align:left; }
+  .pos { color:#2b8a3e; } .neg { color:var(--accent); }
+  .bot { font-size:11px; background:rgba(255,255,255,.2); border-radius:4px; padding:0 4px; margin-left:3px; }
+  .note { color:var(--mute); font-size:13px; margin-top:8px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Black Queen: how a game runs</h1>
+  <p class="sub">Mockup only. You plus bots, in your browser. Nothing is built yet.</p>
+
+  <h2>Start to finish</h2>
+  <div class="flow">
+    <div class="step"><b><span class="num">1</span>Setup</b>Pick number of players (5 to 9). You take seat 1, the rest are bots.<small>Bots get names; you can switch a seat to "human" later for pass-and-play.</small></div>
+    <div class="step"><b><span class="num">2</span>Deal</b>Cards per player = floor(52 / players). Extra cards removed, lowest first.</div>
+    <div class="step"><b><span class="num">3</span>Bid</b>Random first bidder, clockwise. Raise by 5 or pass. Passing is final. 125 ends it. All pass: last player takes the minimum.</div>
+    <div class="step"><b><span class="num">4</span>Call</b>Winner picks trump and names partner card(s). Partners stay hidden until the card is played.</div>
+    <div class="step"><b><span class="num">5</span>Play</b>Bidder leads. Follow suit. Highest trump wins, else highest of the led suit. Winner leads next.</div>
+    <div class="step"><b><span class="num">6</span>Score</b>Team points &ge; bid: bidder and partners get +bid, opponents 0. Otherwise bidder gets &minus;bid.</div>
+  </div>
+  <div class="loop">&#8635; After scoring, the scoreboard keeps running totals and a "Deal next round" button starts step 2 again. There is no end; you stop when you want.</div>
+
+  <h2>Screens</h2>
+  <div class="screens">
+
+    <div class="screen"><h3>A. Setup</h3><div class="body">
+      <p style="margin-top:0"><b>Players</b></p>
+      <div class="row"><span class="pill">5</span><span class="pill on">6</span><span class="pill">7</span><span class="pill">8</span><span class="pill">9</span></div>
+      <p><b>Seats</b></p>
+      <table>
+        <tr><td>1. You</td><td>Human</td></tr>
+        <tr><td>2. Asha</td><td>Bot</td></tr>
+        <tr><td>3. Dev</td><td>Bot</td></tr>
+        <tr><td>4. Mira</td><td>Bot</td></tr>
+        <tr><td>5. Kabir</td><td>Bot</td></tr>
+        <tr><td>6. Zoya</td><td>Bot</td></tr>
+      </table>
+      <div class="row"><span class="btn">Start game</span></div>
+      <p class="note">6 players: 8 cards each, 4 cards removed (2D 2C 2H 2S). Min bid 75, 1 partner.</p>
+    </div></div>
+
+    <div class="screen"><h3>B. Bidding</h3><div class="body">
+      <div class="table">
+        <div class="seats">
+          <div class="seat">Asha<span class="bot">bot</span><em>pass</em></div>
+          <div class="seat">Dev<span class="bot">bot</span><em>85</em></div>
+          <div class="seat turn">You<em>your turn</em></div>
+          <div class="seat">Mira<span class="bot">bot</span><em>&mdash;</em></div>
+          <div class="seat">Kabir<span class="bot">bot</span><em>&mdash;</em></div>
+          <div class="seat">Zoya<span class="bot">bot</span><em>&mdash;</em></div>
+        </div>
+        <div class="hand">
+          <div class="c r">A&hearts;</div><div class="c">K&spades;</div><div class="c r">Q&diams;</div><div class="c">J&clubs;</div>
+          <div class="c r">10&hearts;</div><div class="c">7&spades;</div><div class="c r">5&diams;</div><div class="c">9&clubs;</div>
+        </div>
+      </div>
+      <div class="row"><span class="btn">Bid 90</span><span class="btn ghost">+5 / &minus;5</span><span class="btn ghost">Pass</span></div>
+      <p class="note">Current bid: 85 by Dev. Your hand is worth 55 points.</p>
+    </div></div>
+
+    <div class="screen"><h3>C. Trump and partner</h3><div class="body">
+      <p style="margin-top:0"><b>You won at 90. Pick trump</b></p>
+      <div class="row"><span class="pill">&spades;</span><span class="pill on">&hearts;</span><span class="pill">&diams;</span><span class="pill">&clubs;</span></div>
+      <p><b>Name your partner card</b></p>
+      <div class="row"><span class="pill on">K&hearts;</span><span class="pill">Q&hearts;</span><span class="pill">A&spades;</span><span class="pill">other&hellip;</span></div>
+      <div class="row"><span class="btn">Confirm</span></div>
+      <p class="note">Whoever holds K&hearts; is your partner. Nobody knows who until it is played.</p>
+    </div></div>
+
+    <div class="screen"><h3>D. Playing a trick</h3><div class="body">
+      <div class="table">
+        <div class="seats">
+          <div class="seat">Asha<span class="bot">bot</span><em>12 pts</em></div>
+          <div class="seat">Dev<span class="bot">bot</span><em>0 pts</em></div>
+          <div class="seat turn">You<em>bidder, 20 pts</em></div>
+          <div class="seat">Mira<span class="bot">bot</span><em>35 pts</em></div>
+          <div class="seat">Kabir<span class="bot">bot</span><em>0 pts</em></div>
+          <div class="seat">Zoya<span class="bot">bot</span><em>10 pts</em></div>
+        </div>
+        <div class="trick">
+          <div class="c r">9&hearts;</div><div class="c r">3&hearts;</div><div class="c r">J&hearts;</div>
+        </div>
+        <div class="hand">
+          <div class="c r">A&hearts;</div><div class="c r pick">10&hearts;</div><div class="c dim">K&spades;</div><div class="c dim">Q&diams;</div><div class="c dim">J&clubs;</div>
+        </div>
+      </div>
+      <p class="note">Led suit is &hearts;, so only hearts are playable (others dimmed). Bots play after a short pause so you can follow.</p>
+    </div></div>
+
+    <div class="screen"><h3>E. Round result and scoreboard</h3><div class="body">
+      <p style="margin-top:0"><b>Bid 90. Team scored 105. Made it.</b></p>
+      <table>
+        <tr><th>Player</th><th>This round</th><th>Total</th></tr>
+        <tr><td>You (bidder)</td><td class="pos">+90</td><td>+90</td></tr>
+        <tr><td>Kabir (partner)</td><td class="pos">+90</td><td>+90</td></tr>
+        <tr><td>Asha</td><td>0</td><td>0</td></tr>
+        <tr><td>Dev</td><td>0</td><td>0</td></tr>
+        <tr><td>Mira</td><td>0</td><td>0</td></tr>
+        <tr><td>Zoya</td><td>0</td><td>0</td></tr>
+      </table>
+      <div class="row"><span class="btn">Deal next round</span><span class="btn ghost">Stop</span></div>
+    </div></div>
+
+    <div class="screen"><h3>F. Bots (my guess, not agreed)</h3><div class="body">
+      <p style="margin-top:0"><b>Level 1: simple</b></p>
+      <p class="note" style="margin-top:0">Bids from the points in its hand, picks its longest suit as trump, follows suit, plays the lowest card that wins, otherwise dumps its lowest.</p>
+      <p><b>Level 2: smarter (later)</b></p>
+      <p class="note" style="margin-top:0">Tracks which point cards have gone, guesses who the partner is, and saves points for its own team.</p>
+    </div></div>
+
+  </div>
+</main>
+</body>
+</html>
