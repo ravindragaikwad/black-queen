@@ -1,6 +1,7 @@
 'use strict';
 // Black Queen game logic. Pure JS, no dependencies. Works in Node and browsers.
 // Cards are strings like "10S", "QH", "AD". Suits: S H D C. Players are indexed 0..n-1 clockwise.
+(function (root) {
 
 const SUITS = ['S', 'H', 'D', 'C'];
 const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
@@ -52,6 +53,32 @@ function deal(n, rng = Math.random) {
   return { hands, removed, perPlayer };
 }
 
+// Cards a player may play: must follow the led suit if able.
+function legalCards(hand, trick) {
+  if (trick.length === 0) return hand.slice();
+  const led = suitOf(trick[0].card);
+  const follow = hand.filter((c) => suitOf(c) === led);
+  return follow.length ? follow : hand.slice();
+}
+
+// Seat currently winning a (possibly partial) trick: highest trump, else highest of the led suit.
+function trickWinner(trick, trump) {
+  const led = suitOf(trick[0].card);
+  const trumps = trick.filter((t) => suitOf(t.card) === trump);
+  const pool = trumps.length ? trumps : trick.filter((t) => suitOf(t.card) === led);
+  return pool.reduce((a, b) => (strength(b.card) > strength(a.card) ? b : a)).player;
+}
+
+// Team points >= bid is a success: bidder and each partner get +bid, otherwise bidder gets -bid.
+function scoreRound({ bid, bidder, team, captured, n }) {
+  const teamPoints = team.reduce((s, p) => s + captured[p], 0);
+  const success = teamPoints >= bid;
+  const scores = Array(n).fill(0);
+  if (success) team.forEach((p) => (scores[p] = bid));
+  else scores[bidder] = -bid;
+  return { teamPoints, success, scores };
+}
+
 class Game {
   constructor(n, { rng = Math.random } = {}) {
     this.n = n;
@@ -70,6 +97,7 @@ class Game {
     this.trump = null;
     this.partnerCards = [];
     this.trick = [];
+    this.lastTrick = null;
     this.captured = Array(n).fill(0);
     this.revealed = new Set();
     this.result = null;
@@ -130,11 +158,7 @@ class Game {
   }
 
   legalCards(player) {
-    const hand = this.hands[player];
-    if (this.trick.length === 0) return hand.slice();
-    const led = suitOf(this.trick[0].card);
-    const follow = hand.filter((c) => suitOf(c) === led);
-    return follow.length ? follow : hand.slice();
+    return legalCards(this.hands[player], this.trick);
   }
 
   play(player, card) {
@@ -152,11 +176,10 @@ class Game {
   }
 
   _resolveTrick() {
-    const led = suitOf(this.trick[0].card);
-    const trumps = this.trick.filter((t) => suitOf(t.card) === this.trump);
-    const pool = trumps.length ? trumps : this.trick.filter((t) => suitOf(t.card) === led);
-    const winner = pool.reduce((a, b) => (strength(b.card) > strength(a.card) ? b : a)).player;
-    this.captured[winner] += this.trick.reduce((s, t) => s + points(t.card), 0);
+    const winner = trickWinner(this.trick, this.trump);
+    const trickPoints = this.trick.reduce((s, t) => s + points(t.card), 0);
+    this.captured[winner] += trickPoints;
+    this.lastTrick = { cards: this.trick, winner, points: trickPoints };
     this.trick = [];
     if (this.hands.every((h) => h.length === 0)) return this._finish();
     this.turn = winner;
@@ -173,12 +196,9 @@ class Game {
 
   _finish() {
     const team = this.teamMembers();
-    const teamPoints = team.reduce((s, p) => s + this.captured[p], 0);
-    const success = teamPoints >= this.bid;
-    // PLACEHOLDER scoring: success -> each team member +bid; failure -> bidder -bid.
-    const scores = Array(this.n).fill(0);
-    if (success) team.forEach((p) => (scores[p] = this.bid));
-    else scores[this.bidder] = -this.bid;
+    const { teamPoints, success, scores } = scoreRound({
+      bid: this.bid, bidder: this.bidder, team, captured: this.captured, n: this.n,
+    });
     this.result = { team, teamPoints, bid: this.bid, success, scores };
     this.phase = 'done';
   }
@@ -187,6 +207,7 @@ class Game {
   viewFor(player) {
     return {
       n: this.n,
+      you: player,
       phase: this.phase,
       turn: this.turn,
       yourHand: this.hands[player].slice(),
@@ -199,6 +220,7 @@ class Game {
       partnerCards: this.partnerCards.slice(),
       revealedPartners: [...this.revealed],
       trick: this.trick.slice(),
+      lastTrick: this.lastTrick,
       captured: this.captured.slice(),
       removed: this.removed.slice(),
       result: this.result,
@@ -206,7 +228,11 @@ class Game {
   }
 }
 
-module.exports = {
+const api = {
   Game, deal, points, fullDeck, minBid, partnerCount, shuffle,
   rankOf, suitOf, strength, SUITS, REMOVAL_ORDER, MAX_BID, BID_STEP, MIN_PLAYERS,
+  legalCards, trickWinner, scoreRound,
 };
+if (typeof module !== 'undefined' && module.exports) module.exports = api;
+else root.BQ = Object.assign(root.BQ || {}, api);
+})(typeof globalThis !== 'undefined' ? globalThis : this);
