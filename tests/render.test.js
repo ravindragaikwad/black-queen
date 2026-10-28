@@ -190,3 +190,38 @@ test('reset-scoreboard asks for confirmation before anything is cleared', () => 
   assert.ok(!asking.includes('data-action="reset-scoreboard"'), 'the first-step button is replaced by the prompt');
   assert.ok(asking.includes('1 round'), 'says how much would be lost');
 });
+
+test('seatPosition puts seat 0 at the bottom centre and the rest around the table clockwise', () => {
+  for (const n of [5, 6, 7, 8, 9]) {
+    const spots = Array.from({ length: n }, (_, i) => r.seatPosition(i, n));
+    assert.equal(spots[0].left, 50, `n=${n} seat 0 centred`);
+    assert.ok(spots[0].top > 60, `n=${n} seat 0 at the bottom`);
+    assert.equal(new Set(spots.map((s) => `${s.left},${s.top}`)).size, n, `n=${n} all seats distinct`);
+    assert.ok(spots.every((s) => s.left > 0 && s.left < 100 && s.top > 0 && s.top < 100), 'inside the table');
+    assert.ok(spots[1].left < 50, 'next seat clockwise is on the left side');
+  }
+});
+
+test('seatPosition with a smaller radius moves toward the centre', () => {
+  const edge = r.seatPosition(3, 6);
+  const inner = r.seatPosition(3, 6, 0.5);
+  assert.ok(Math.abs(inner.left - 50) < Math.abs(edge.left - 50) + 0.01);
+  assert.ok(Math.abs(inner.top - 50) < Math.abs(edge.top - 50) + 0.01);
+});
+
+test('seats are placed around a round table', () => {
+  const html = r.renderScreen(ctxFixture({ view: { phase: 'play', bidder: 1, bid: 80, trump: 'S', partnerCards: ['AH'] } }));
+  assert.ok(html.includes('class="table"'));
+  const seatTags = html.match(/<div class="seat[^>]*>/g);
+  assert.equal(seatTags.length, 6);
+  assert.ok(seatTags.every((t) => /style="left:[\d.]+%;top:[\d.]+%/.test(t)));
+});
+
+test('cards in the current trick sit in front of the player who played them', () => {
+  const trick = [{ player: 2, card: '9H' }, { player: 4, card: 'KH' }];
+  const html = r.renderScreen(ctxFixture({ view: { phase: 'play', bidder: 1, bid: 80, trump: 'S', partnerCards: ['AH'], trick } }));
+  const played = html.match(/<div class="trick-card[^>]*>/g);
+  assert.equal(played.length, 2);
+  assert.ok(played.every((t) => /style="left:[\d.]+%;top:[\d.]+%/.test(t)));
+  assert.ok(html.includes('9♥') && html.includes('K♥'));
+});

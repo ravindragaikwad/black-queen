@@ -40,6 +40,14 @@
     return `<div class="hand${enabled ? '' : ' locked'}">${rowsHtml}</div>`;
   }
 
+  // Percent position of a seat on the oval table: seat 0 at the bottom centre, others clockwise.
+  // `factor` < 1 pulls the point toward the centre (used for cards played in front of a seat).
+  function seatPosition(i, n, factor = 1) {
+    const angle = ((90 + (i * 360) / n) * Math.PI) / 180;
+    const round = (v) => Math.round(v * 10) / 10;
+    return { left: round(50 + 40 * factor * Math.cos(angle)), top: round(50 + 38 * factor * Math.sin(angle)) };
+  }
+
   function seatTile(i, ctx) {
     const { view, bids } = ctx.state;
     const classes = ['seat'];
@@ -55,11 +63,17 @@
     let badges = '';
     if (view.bidder === i) badges += '<span class="badge badge-bidder">bidder</span>';
     if (view.revealedPartners.includes(i)) badges += '<span class="badge badge-partner">partner</span>';
-    return `<div class="${classes.join(' ')}" data-seat="${i}"><span class="name">${esc(ctx.names[i])}</span>${badges}<em>${esc(sub)}</em></div>`;
+    const pos = seatPosition(i, ctx.names.length);
+    const initial = esc(String(ctx.names[i]).charAt(0).toUpperCase());
+    return `<div class="${classes.join(' ')}" data-seat="${i}" style="left:${pos.left}%;top:${pos.top}%">` +
+      `<span class="avatar" style="--hue:${i * 40}">${initial}</span><span class="name">${esc(ctx.names[i])}</span>${badges}<em>${esc(sub)}</em></div>`;
   }
 
-  const seats = (ctx) =>
-    `<div class="seats">${ctx.names.map((_, i) => seatTile(i, ctx)).join('')}</div>`;
+  // The round table: felt, every seat around it, a centre label, and any played cards in front of their players.
+  function tableHtml(ctx, centre, playedHtml = '') {
+    const tiles = ctx.names.map((_, i) => seatTile(i, ctx)).join('');
+    return `<div class="table"><div class="felt"></div>${tiles}<div class="table-center">${centre}</div>${playedHtml}</div>`;
+  }
 
   function handFor(ctx, enabled) {
     const { view } = ctx.state;
@@ -88,14 +102,14 @@
       controls = '<p class="note">You passed.</p>';
     }
     const current = view.highBid === null ? 'No bid yet' : `Current bid: ${view.highBid} by ${esc(ctx.names[view.highBidder])}`;
-    return `<section class="screen bidding"><h2>Bidding</h2>${seats(ctx)}<p class="note">${current}</p>${handFor(ctx, false)}${controls}</section>`;
+    return `<section class="screen bidding"><h2>Bidding</h2>${tableHtml(ctx, `<span class="bid-chip">${current}</span>`)}${handFor(ctx, false)}${controls}</section>`;
   }
 
   function renderDeclare(ctx) {
     const { view, userTurn } = ctx.state;
     const bidderName = esc(ctx.names[view.bidder]);
     if (!(userTurn && view.bidder === view.you)) {
-      return `<section class="screen declare"><h2>${bidderName} won the bid at ${view.bid}</h2>${seats(ctx)}<p class="note">Choosing trump and partner card(s)…</p>${handFor(ctx, false)}</section>`;
+      return `<section class="screen declare"><h2>${bidderName} won the bid at ${view.bid}</h2>${tableHtml(ctx, `<span class="bid-chip">Choosing trump…</span>`)}${handFor(ctx, false)}</section>`;
     }
     const count = partnerCount(view.n);
     const inPlay = fullDeck().filter((c) => !view.removed.includes(c));
@@ -119,9 +133,10 @@
   function renderPlay(ctx) {
     const { view, userTurn, paused, completedTrick } = ctx.state;
     const shown = completedTrick ? completedTrick.cards : view.trick;
-    const trickHtml = shown.map((t) => {
+    const playedHtml = shown.map((t) => {
       const win = completedTrick && completedTrick.winner === t.player ? ' winner' : '';
-      return `<div class="trick-card${win}"><span class="who">${esc(ctx.names[t.player])}</span>${staticCard(t.card)}</div>`;
+      const pos = seatPosition(t.player, ctx.names.length, 0.45);
+      return `<div class="trick-card${win}" style="left:${pos.left}%;top:${pos.top}%">${staticCard(t.card)}</div>`;
     }).join('');
     const caption = completedTrick
       ? `<p class="note">${esc(ctx.names[completedTrick.winner])} wins the trick (+${completedTrick.points})</p>`
@@ -134,8 +149,9 @@
       ? `<button class="btn" data-action="play" data-card="${ctx.selected}">Play ${label(ctx.selected)}</button>`
       : '';
     const info =
-      `Trump ${SYMBOL[view.trump]} · Bid ${view.bid} by ${esc(ctx.names[view.bidder])} · Partner card: ${view.partnerCards.map(staticCard).join(' ')}`;
-    return `<section class="screen play"><p class="info">${info}</p>${seats(ctx)}<div class="trick">${trickHtml}</div>${caption}` +
+      `Trump ${SYMBOL[view.trump]} · Bid ${view.bid} by ${esc(ctx.names[view.bidder])} · Partner card${view.partnerCards.length > 1 ? 's' : ''}: ${view.partnerCards.map(staticCard).join(' ')}`;
+    const centre = `<span class="bid-chip">Bid ${view.bid}</span><span class="trump-chip ${view.trump === 'H' || view.trump === 'D' ? 'red' : ''}">${SYMBOL[view.trump]}</span>`;
+    return `<section class="screen play"><p class="info">${info}</p>${tableHtml(ctx, centre, playedHtml)}${caption}` +
       `<p class="status">${status}</p>${handFor(ctx, userTurn)}<div class="row">${playButton}</div></section>`;
   }
 
@@ -187,7 +203,7 @@
     return renderPlay(ctx);
   }
 
-  const api = { renderHand, renderScreen };
+  const api = { renderHand, renderScreen, seatPosition };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.BQ = Object.assign(root.BQ || {}, api);
 })(typeof globalThis !== 'undefined' ? globalThis : this);
