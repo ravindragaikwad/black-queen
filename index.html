@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#1f5c3f">
   <title>Black Queen</title>
   <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" href="./icons/icon-192.png">
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
   <link rel="stylesheet" href="./styles.css">
 </head>
@@ -17,6 +18,10 @@
   <script src="./session.js"></script>
   <script src="./cards.js"></script>
   <script src="./render.js"></script>
+  <script src="./vendor/gsap.min.js"></script>
+  <script src="./vendor/confetti.browser.js"></script>
+  <script src="./sound.js"></script>
+  <script src="./fx.js"></script>
   <script src="./app.js"></script>
   <script>
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(function () {});

@@ -1,6 +1,6 @@
 'use strict';
 // Offline support. Bump CACHE's version when changing the file list so old caches are dropped.
-const CACHE = 'blackqueen-v2';
+const CACHE = 'blackqueen-v3';
 const FILES = [
   './',
   './index.html',
@@ -11,6 +11,10 @@ const FILES = [
   './session.js',
   './cards.js',
   './render.js',
+  './sound.js',
+  './fx.js',
+  './vendor/gsap.min.js',
+  './vendor/confetti.browser.js',
   './app.js',
   './manifest.webmanifest',
   './icons/icon-192.png',

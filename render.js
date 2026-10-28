@@ -137,7 +137,7 @@
     const playedHtml = shown.map((t) => {
       const win = completedTrick && completedTrick.winner === t.player ? ' winner' : '';
       const pos = seatPosition(t.player, ctx.names.length, 0.45);
-      return `<div class="trick-card${win}" style="left:${pos.left}%;top:${pos.top}%">${staticCard(t.card)}</div>`;
+      return `<div class="trick-card${win}" data-player="${t.player}" style="left:${pos.left}%;top:${pos.top}%">${staticCard(t.card)}</div>`;
     }).join('');
     const caption = completedTrick
       ? `<p class="note">${esc(ctx.names[completedTrick.winner])} wins the trick (+${completedTrick.points})</p>`
@@ -195,13 +195,26 @@
       `<table>${seatRows}</table><p class="note">Minimum bid ${minBid(n)}, ${partnerCount(n)} partner card${partnerCount(n) > 1 ? 's' : ''}.</p>${action}${boardHtml}</section>`;
   }
 
+  function soundButton(ctx) {
+    const on = !ctx.muted;
+    const waves = on
+      ? '<path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+      : '<path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';
+    return '<div class="topbar"><button class="icon-btn" data-action="toggle-sound" aria-pressed="' + on + '" aria-label="Sound">' +
+      '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9H3z"/>' + waves + '</svg></button></div>';
+  }
+
   function renderScreen(ctx) {
-    if (ctx.screen === 'setup') return renderSetup(ctx);
-    if (ctx.screen === 'result') return renderResult(ctx);
-    const phase = ctx.state.view.phase;
-    if (phase === 'bidding') return renderBidding(ctx);
-    if (phase === 'declare') return renderDeclare(ctx);
-    return renderPlay(ctx);
+    let body;
+    if (ctx.screen === 'setup') body = renderSetup(ctx);
+    else if (ctx.screen === 'result') body = renderResult(ctx);
+    else {
+      const phase = ctx.state.view.phase;
+      if (phase === 'bidding') body = renderBidding(ctx);
+      else if (phase === 'declare') body = renderDeclare(ctx);
+      else body = renderPlay(ctx);
+    }
+    return soundButton(ctx) + body;
   }
 
   const api = { renderHand, renderScreen, seatPosition };

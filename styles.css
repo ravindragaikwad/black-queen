@@ -14,6 +14,8 @@
   --red: #d8433a;
   --card-w: 60px;
   --card-h: 88px;
+  --mini-w: 44px;
+  --mini-h: 62px;
   color-scheme: dark;
 }
 
@@ -38,6 +40,10 @@ h2 { text-align: center; }
 /* Partner cards in the info line are small inline chips, not tap targets */
 .info .card.mini { width: 26px; height: 36px; font-size: 12px; vertical-align: middle; margin: 0 1px; border-radius: 5px; }
 .status { text-align: center; font-weight: 600; min-height: 1.4em; margin: 6px 0; color: var(--gold); }
+
+.topbar { display: flex; justify-content: flex-end; padding: 8px 12px 0; }
+.icon-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: rgba(0, 0, 0, .3); color: var(--gold); display: grid; place-items: center; cursor: pointer; }
+.icon-btn[aria-pressed="false"] { color: var(--mute); }
 
 .row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; justify-content: center; }
 .btn, .pill {
@@ -107,7 +113,8 @@ th:first-child, td:first-child { text-align: left; }
 .badge-bidder { background: var(--red); }
 .badge-partner { background: var(--gold); color: #1b1206; }
 
-.trick-card { position: absolute; transform: translate(-50%, -50%); }
+.trick-card { position: absolute; width: 0; height: 0; }
+.trick-card .card.mini { position: absolute; left: calc(var(--mini-w) / -2); top: calc(var(--mini-h) / -2); }
 .trick-card .card { box-shadow: 0 3px 8px rgba(0, 0, 0, .6); }
 .trick-card.winner .card { box-shadow: 0 0 0 3px var(--gold), 0 3px 10px rgba(0, 0, 0, .6); }
 
@@ -130,7 +137,7 @@ th:first-child, td:first-child { text-align: left; }
 .card .face-svg { display: block; width: 100%; height: 100%; pointer-events: none; }
 .card .face-svg.queen-spades { filter: drop-shadow(0 0 2px var(--gold)); }
 .card:has(.queen-spades) { box-shadow: 0 0 0 2px var(--gold); }
-.card.mini { width: 40px; height: 56px; font-size: 15px; cursor: default; }
+.card.mini { width: var(--mini-w); height: var(--mini-h); font-size: 15px; cursor: default; }
 .hand { margin: 8px 0; }
 .hand-row { display: flex; justify-content: center; gap: 6px; margin: 6px 0; }
 .hand:not(.locked) .card[aria-disabled="true"] { opacity: .35; cursor: not-allowed; }
@@ -143,7 +150,7 @@ th:first-child, td:first-child { text-align: left; }
 
 /* Desktop: same flow, a wide oval table, larger cards, hand on a single line */
 @media (min-width: 900px) {
-  :root { --card-w: 76px; --card-h: 112px; }
+  :root { --card-w: 76px; --card-h: 112px; --mini-w: 56px; --mini-h: 79px; }
   #app { max-width: 960px; }
   .screen { padding: 24px; }
   .table { aspect-ratio: 2 / 1; max-width: 860px; margin: 10px auto 22px; }
@@ -155,5 +162,4 @@ th:first-child, td:first-child { text-align: left; }
   .hand { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
   .hand-row { display: contents; }
   .card { font-size: 24px; }
-  .card.mini { width: 48px; height: 68px; font-size: 18px; }
 }

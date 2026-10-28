@@ -234,3 +234,22 @@ test('hand cards and played cards are drawn as card faces', () => {
   assert.match(html, /<div class="trick-card[^>]*>\s*<span class="card mini[^>]*><svg class="face-svg/);
   assert.ok(html.includes('aria-label="9♥"'));
 });
+
+test('every screen has a sound button that reflects the mute state', () => {
+  const resultView = { phase: 'done', bidder: 0, bid: 90, result: { team: [0], teamPoints: 100, bid: 90, success: true, scores: [90, 0, 0, 0, 0, 0] } };
+  const screens = [
+    ctxFixture({ screen: 'setup' }),
+    ctxFixture(),
+    ctxFixture({ screen: 'result', view: resultView }),
+  ];
+  for (const ctx of screens) {
+    assert.match(r.renderScreen(ctx), /data-action="toggle-sound"[^>]*aria-pressed="true"/, 'sound on by default');
+    assert.match(r.renderScreen({ ...ctx, muted: true }), /data-action="toggle-sound"[^>]*aria-pressed="false"/, 'muted');
+  }
+});
+
+test('played cards are tagged with the player who played them', () => {
+  const trick = [{ player: 2, card: '9H' }, { player: 4, card: 'KH' }];
+  const html = r.renderScreen(ctxFixture({ view: { phase: 'play', bidder: 1, bid: 80, trump: 'S', partnerCards: ['AH'], trick } }));
+  assert.ok(html.includes('data-player="2"') && html.includes('data-player="4"'));
+});

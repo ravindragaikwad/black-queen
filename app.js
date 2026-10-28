@@ -2,7 +2,7 @@
 // DOM wiring: one click listener dispatching on data-action, state kept in ctx, HTML from render.js.
 (function (root) {
   const { Session, renderScreen, botNames, newScoreboard, applyRound, saveScoreboard, loadScoreboard, clearScoreboard,
-    minBid, partnerCount, MAX_BID, BID_STEP } = root.BQ;
+    minBid, partnerCount, MAX_BID, BID_STEP, cues, createFx, createSound } = root.BQ;
 
   function deviceStorage() {
     try {
@@ -19,11 +19,18 @@
   const startN = board && board.names.length >= 5 && board.names.length <= 9 ? board.names.length : 6;
   if (!board) board = newScoreboard(startN);
 
+  const sound = createSound({ storage, AudioCtx: root.AudioContext || root.webkitAudioContext });
+  const reducedMotion = !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const fx = createFx({ gsap: root.gsap, confetti: root.confetti, reducedMotion });
+
   let session = null;
   let recorded = false;
+  let prevState = null; // last state shown, to work out which sounds and animations to run
+  let flyFrom = null; // where the user's card was before it was played
   const ctx = {
     screen: 'setup', names: botNames(startN), state: null, selected: null, bidAmount: 0,
     trump: null, partnerPicks: [], setup: { n: startN, savedMismatch: false }, scoreboard: board,
+    muted: sound.isMuted(),
   };
 
   const draw = () => { el.innerHTML = renderScreen(ctx); };
@@ -31,6 +38,38 @@
   function nextBidFloor() {
     const v = ctx.state.view;
     return v.highBid === null ? minBid(v.n) : v.highBid + BID_STEP;
+  }
+
+  const rectOfSeat = (p) => {
+    const seat = el.querySelector(`[data-seat="${p}"] .avatar`);
+    return seat ? seat.getBoundingClientRect() : null;
+  };
+
+  // Sounds and animations for a change of state. `before` lists whose cards were already on the table.
+  function runCues(list, before) {
+    list.forEach((c) => {
+      if (c === 'sweep') root.setTimeout(() => sound.play('sweep'), 700);
+      else sound.play(c);
+    });
+    if (list.includes('deal')) {
+      const table = el.querySelector('.table');
+      const r = table ? table.getBoundingClientRect() : { left: root.innerWidth / 2, top: root.innerHeight / 2, width: 0, height: 0 };
+      fx.deal([...el.querySelectorAll('.hand .card')], { left: r.left + r.width / 2, top: r.top + r.height / 2, width: 0, height: 0 });
+    }
+    if (list.includes('play')) {
+      el.querySelectorAll('.trick-card').forEach((card) => {
+        if (before.has(card.dataset.player)) return;
+        const p = Number(card.dataset.player);
+        const from = p === 0 && flyFrom ? flyFrom : rectOfSeat(p);
+        if (from) fx.fly(card, from);
+      });
+      flyFrom = null;
+    }
+    if (list.includes('sweep')) {
+      const winner = rectOfSeat(ctx.state.completedTrick.winner);
+      if (winner) fx.sweep([...el.querySelectorAll('.trick-card')], winner);
+    }
+    if (list.includes('win')) fx.celebrate();
   }
 
   function onSessionChange(state) {
@@ -47,7 +86,10 @@
     } else if (ctx.screen !== 'result') {
       ctx.screen = 'game';
     }
+    const before = new Set([...el.querySelectorAll('.trick-card')].map((n) => n.dataset.player));
     draw();
+    runCues(cues(prevState, state), before);
+    prevState = state;
   }
 
   function begin(n) {
@@ -57,6 +99,8 @@
     ctx.partnerPicks = [];
     ctx.bidAmount = 0;
     recorded = false;
+    prevState = null;
+    flyFrom = null;
     ctx.screen = 'game';
     session = new Session({ n, onChange: onSessionChange });
     session.start();
@@ -106,8 +150,14 @@
       draw();
     },
     declare() { session.userDeclare(ctx.trump, ctx.partnerPicks.slice()); },
-    select(d) { ctx.selected = d.card; draw(); },
-    play(d) { ctx.selected = null; session.userPlay(d.card); },
+    select(d) { ctx.selected = d.card; sound.play('select'); draw(); },
+    play(d) {
+      const cardEl = el.querySelector(`.card[data-card="${d.card}"]`);
+      flyFrom = cardEl ? cardEl.getBoundingClientRect() : null;
+      ctx.selected = null;
+      session.userPlay(d.card);
+    },
+    'toggle-sound'() { ctx.muted = sound.toggle(); draw(); },
     'next-round'() { begin(session.game.n); },
     stop() { ctx.setup.n = session.game.n; ctx.setup.savedMismatch = false; ctx.screen = 'setup'; draw(); },
   };
@@ -115,9 +165,11 @@
   el.addEventListener('click', (e) => {
     const target = e.target.closest('[data-action]');
     if (!target || !actions[target.dataset.action]) return;
+    sound.unlock(); // browsers only allow audio after a tap
     try {
       actions[target.dataset.action](target.dataset);
     } catch (err) {
+      flyFrom = null;
       console.warn(err.message); // an out-of-turn tap is refused by the engine; the screen stays as it was
     }
   });
