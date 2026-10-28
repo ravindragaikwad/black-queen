@@ -317,3 +317,13 @@ test('result screen can go back to the table and lists the point cards each play
   const row = (html.match(/<tr><td>Asha[^]*?<\/tr>/) || [''])[0];
   assert.ok(row.includes('A♥') && row.includes('K♥'), 'Won column lists the cards');
 });
+
+test('setup lets the player choose the bot level, smart by default', () => {
+  const html = r.renderScreen(ctxFixture({ screen: 'setup' }));
+  assert.match(html, /data-action="set-level" data-level="easy"/);
+  assert.match(html, /class="pill on" data-action="set-level" data-level="smart"/);
+  const easy = r.renderScreen(ctxFixture({ screen: 'setup', level: 'easy' }));
+  assert.match(easy, /class="pill on" data-action="set-level" data-level="easy"/);
+  assert.match(easy, /class="pill" data-action="set-level" data-level="smart"/);
+  assert.ok(html.includes('Bot level'));
+});

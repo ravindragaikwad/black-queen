@@ -1,7 +1,7 @@
 'use strict';
 // DOM wiring: one click listener dispatching on data-action, state kept in ctx, HTML from render.js.
 (function (root) {
-  const { Session, renderScreen, botNames, newScoreboard, applyRound, saveScoreboard, loadScoreboard, clearScoreboard,
+  const { Session, renderScreen, botNames, newScoreboard, applyRound, saveScoreboard, loadScoreboard, clearScoreboard, loadLevel, saveLevel, smartBots,
     minBid, partnerCount, MAX_BID, BID_STEP, cues, createFx, createSound } = root.BQ;
 
   function deviceStorage() {
@@ -30,7 +30,7 @@
   const ctx = {
     screen: 'setup', names: botNames(startN), state: null, selected: null, bidAmount: 0,
     trump: null, partnerPicks: [], setup: { n: startN, savedMismatch: false }, scoreboard: board,
-    muted: sound.isMuted(),
+    muted: sound.isMuted(), level: loadLevel(storage),
   };
 
   const draw = () => { el.innerHTML = renderScreen(ctx); };
@@ -102,7 +102,7 @@
     prevState = null;
     flyFrom = null;
     ctx.screen = 'game';
-    session = new Session({ n, onChange: onSessionChange });
+    session = new Session({ n, onChange: onSessionChange, bots: ctx.level === 'smart' ? smartBots : undefined });
     session.start();
   }
 
@@ -157,6 +157,7 @@
       ctx.selected = null;
       session.userPlay(d.card);
     },
+    'set-level'(d) { ctx.level = d.level; saveLevel(storage, d.level); draw(); },
     'toggle-sound'() { ctx.muted = sound.toggle(); draw(); },
     'show-result'() { ctx.screen = 'result'; draw(); },
     'view-table'() { ctx.screen = 'review'; draw(); },

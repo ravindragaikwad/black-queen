@@ -205,7 +205,12 @@
     const counts = [5, 6, 7, 8, 9].map(
       (k) => `<button class="pill${k === n ? ' on' : ''}" data-action="set-players" data-n="${k}">${k}</button>`,
     ).join('');
-    const seatRows = sbm.botNames(n).map((name, i) => `<tr><td>${i + 1}. ${esc(name)}</td><td>${i === 0 ? 'Human' : 'Bot'}</td></tr>`).join('');
+    const level = ctx.level || 'smart';
+    const levels = [['easy', 'Easy'], ['smart', 'Smart']].map(
+      ([id, text]) => `<button class="pill${id === level ? ' on' : ''}" data-action="set-level" data-level="${id}">${text}</button>`,
+    ).join('');
+    const botLabel = level === 'smart' ? 'Smart bot' : 'Easy bot';
+    const seatRows = sbm.botNames(n).map((name, i) => `<tr><td>${i + 1}. ${esc(name)}</td><td>${i === 0 ? 'Human' : botLabel}</td></tr>`).join('');
     const board = ctx.scoreboard;
     let boardHtml = '';
     if (board.rounds > 0 && board.names.length === n) {
@@ -223,6 +228,7 @@
         '<div class="row"><button class="btn" data-action="confirm-reset">Reset and start</button><button class="btn ghost" data-action="cancel-reset">Cancel</button></div>'
       : '<div class="row"><button class="btn" data-action="start">Start game</button></div>';
     return `<section class="screen setup"><h1>Black Queen</h1><p><b>Players</b></p><div class="row">${counts}</div>` +
+      `<p><b>Bot level</b></p><div class="row">${levels}</div>` +
       `<table>${seatRows}</table><p class="note">Minimum bid ${minBid(n)}, ${partnerCount(n)} partner card${partnerCount(n) > 1 ? 's' : ''}.</p>${action}${boardHtml}</section>`;
   }
 

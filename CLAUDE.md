@@ -5,7 +5,8 @@ A web-first card game (Black Queen) for 5+ players, built as a PWA, with a possi
 ## Files
 - `rules.md`: the agreed rules spec. Read this first.
 - `blackqueen.js`: pure JS game logic (no dependencies, works in Node and browsers via the `BQ` global). Main class: `Game`; pure helpers `legalCards`, `trickWinner`, `scoreRound`.
-- `bot.js`: simple bot (`botBid`, `botDeclare`, `botPlay`), uses only `Game.viewFor(seat)`.
+- `bot.js`: easy bot (`botBid`, `botDeclare`, `botPlay`), uses only `Game.viewFor(seat)`.
+- `smart.js`: smart bot, same API (`smartBots`). Counts cards from the public trick history, tracks who is void, knows its role (bidder/partner/opponent), leads sure winners, feeds points to a teammate who is winning, picks its bid to maximise expected score (calibrated by simulation, see `CALIBRATION`), names strong partner cards. Setup lets the player pick Easy or Smart (default Smart, saved on the device). `node tools/tournament.js` compares them; smart beats easy by roughly 8 to 16 points per seat per round.
 - `scoreboard.js`: running totals saved on the device (localStorage), fixed bot names.
 - `session.js`: `Session` drives one round: user is seat 0, bots on timers, 1.5 s pause after each trick.
 - `cards.js`: card faces as inline SVG (`cardSvg`). `sound.js`: synthesised sounds + mute. `fx.js`: `cues` (which sound/animation a state change needs), `createFx` (GSAP/confetti wrapper). `vendor/`: bundled GSAP and canvas-confetti (see vendor/NOTICE.md).
@@ -42,10 +43,10 @@ A web-first card game (Black Queen) for 5+ players, built as a PWA, with a possi
 None on scoring or play.
 
 ## Status
-Live on GitHub Pages: https://ravindragaikwad.github.io/black-queen/ (push needs the gh credential workaround and the user's go-ahead). Round end: the table stays up with a "Round complete" review (everyone's dealt cards revealed, point cards won shown under each name) and a button on to the result. Casino table look, SVG card faces, GSAP animations, synthesised sounds with mute, and confetti on a win are built.
+Live on GitHub Pages: https://ravindragaikwad.github.io/black-queen/ (push needs the gh credential workaround and the user's go-ahead). Round end: the table stays up with a "Round complete" review (everyone's dealt cards revealed, point cards won shown under each name) and a button on to the result. Easy/Smart bot level. Casino table look, SVG card faces, GSAP animations, synthesised sounds with mute, and confetti on a win are built.
 
 ## Next
-1. Smarter bot level (card counting, guessing partners).
+1. A harder bot: guess which unrevealed seat is the partner, and play the end of the round for the exact bid.
 2. Pass-and-play with several humans on one device.
 3. Online rooms: realtime backend (Firebase, Supabase Realtime, PartyKit or Cloudflare Durable Objects), room codes, server-side dealing and validation; `Game.viewFor(player)` already hides other hands.
 4. Capacitor wrap for the app stores only if it gets traction.

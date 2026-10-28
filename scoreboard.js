@@ -2,6 +2,8 @@
 // Running totals per seat, saved on the device. Storage is injected (localStorage in the browser).
 (function (root) {
   const KEY = 'blackqueen.scoreboard.v1';
+  const LEVEL_KEY = 'blackqueen.level.v1';
+  const LEVELS = ['easy', 'smart'];
   const BOT_NAMES = ['Asha', 'Dev', 'Mira', 'Kabir', 'Zoya', 'Rohan', 'Priya', 'Sam'];
 
   const botNames = (n) => ['You', ...BOT_NAMES].slice(0, n);
@@ -53,7 +55,27 @@
     }
   }
 
-  const api = { botNames, newScoreboard, applyRound, saveScoreboard, loadScoreboard, clearScoreboard };
+  // Which bots to play against; remembered on the device. Defaults to the smart bots.
+  function loadLevel(storage) {
+    try {
+      const v = storage.getItem(LEVEL_KEY);
+      return LEVELS.includes(v) ? v : 'smart';
+    } catch (e) {
+      return 'smart';
+    }
+  }
+
+  function saveLevel(storage, level) {
+    if (!LEVELS.includes(level)) return false;
+    try {
+      storage.setItem(LEVEL_KEY, level);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  const api = { loadLevel, saveLevel, botNames, newScoreboard, applyRound, saveScoreboard, loadScoreboard, clearScoreboard };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.BQ = Object.assign(root.BQ || {}, api);
 })(typeof globalThis !== 'undefined' ? globalThis : this);

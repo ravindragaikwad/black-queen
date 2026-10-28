@@ -77,3 +77,20 @@ test('botNames(9) has 9 fixed names with You first; botNames(5) is a prefix', ()
   assert.deepEqual(nine.slice(1), ['Asha', 'Dev', 'Mira', 'Kabir', 'Zoya', 'Rohan', 'Priya', 'Sam']);
   assert.deepEqual(sb.botNames(5), nine.slice(0, 5));
 });
+
+test('bot level: defaults to smart, saves and restores the choice, ignores junk', () => {
+  const storage = memoryStorage();
+  assert.equal(sb.loadLevel(storage), 'smart');
+  assert.equal(sb.saveLevel(storage, 'easy'), true);
+  assert.equal(sb.loadLevel(storage), 'easy');
+  assert.equal(sb.saveLevel(storage, 'smart'), true);
+  assert.equal(sb.loadLevel(storage), 'smart');
+  assert.equal(sb.saveLevel(storage, 'genius'), false, 'unknown levels are refused');
+  assert.equal(sb.loadLevel(memoryStorage({ 'blackqueen.level.v1': 'garbage' })), 'smart');
+});
+
+test('bot level: unavailable storage never throws', () => {
+  const broken = { getItem() { throw new Error('x'); }, setItem() { throw new Error('x'); } };
+  assert.equal(sb.loadLevel(broken), 'smart');
+  assert.equal(sb.saveLevel(broken, 'easy'), false);
+});
