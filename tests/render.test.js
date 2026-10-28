@@ -13,7 +13,7 @@ function viewFixture(over = {}) {
     handSizes: [8, 8, 8, 8, 8, 8],
     highBid: null, highBidder: null, bidder: null, bid: null, trump: null,
     partnerCards: [], revealedPartners: [], trick: [], lastTrick: null,
-    captured: [0, 0, 0, 0, 0, 0],
+    captured: [0, 0, 0, 0, 0, 0], won: [[], [], [], [], [], []], allHands: null,
     removed: ['2D', '2C', '2H', '2S'], result: null,
     ...over,
   };
@@ -252,4 +252,68 @@ test('played cards are tagged with the player who played them', () => {
   const trick = [{ player: 2, card: '9H' }, { player: 4, card: 'KH' }];
   const html = r.renderScreen(ctxFixture({ view: { phase: 'play', bidder: 1, bid: 80, trump: 'S', partnerCards: ['AH'], trick } }));
   assert.ok(html.includes('data-player="2"') && html.includes('data-player="4"'));
+});
+
+const tileFor = (html, seat) => (html.match(new RegExp(`<div class="seat[^>]*data-seat="${seat}"[^]*?</div>`)) || [''])[0];
+const playView = { phase: 'play', bidder: 1, bid: 80, trump: 'S', partnerCards: ['AH'] };
+
+test('under a player\'s name: the point cards they have won, but not worthless cards', () => {
+  const won = [[], [], ['10C', '3D', 'KH'], [], [], []];
+  const html = r.renderScreen(ctxFixture({ view: { ...playView, won, captured: [0, 0, 20, 0, 0, 0] } }));
+  const tile = tileFor(html, 2);
+  assert.ok(tile.includes('10♣') && tile.includes('K♥'), 'point cards shown');
+  assert.ok(!tile.includes('3♦'), 'worthless cards are not listed');
+  assert.ok(tile.includes('20 pts'), 'total still shown');
+  assert.ok(!tileFor(html, 3).includes('won-chip'), 'nothing for a player who has won nothing');
+});
+
+test('a long list of won point cards is shortened to four plus a count', () => {
+  const won = [[], [], ['AH', 'KH', 'QH', 'JH', '10H', '5H'], [], [], []];
+  const tile = tileFor(r.renderScreen(ctxFixture({ view: { ...playView, won } })), 2);
+  assert.equal((tile.match(/class="won-chip/g) || []).length, 4);
+  assert.ok(tile.includes('+2'));
+});
+
+test('the queen of spades is flagged among the won cards', () => {
+  const won = [[], [], ['QS'], [], [], []];
+  const tile = tileFor(r.renderScreen(ctxFixture({ view: { ...playView, won } })), 2);
+  assert.ok(tile.includes('won-chip queen'));
+});
+
+test('the trick caption says which point cards the winner took', () => {
+  const completedTrick = { cards: [{ player: 1, card: '10C' }, { player: 2, card: '3D' }], winner: 1, points: 10 };
+  const html = r.renderScreen(ctxFixture({ view: { ...playView, won: [[], ['10C', '3D'], [], [], [], []] }, state: { completedTrick, paused: true, userTurn: false } }));
+  const caption = html.match(/<p class="note">[^<]*wins the trick[^<]*<\/p>/)[0];
+  assert.ok(caption.includes('10♣') && caption.includes('+10'));
+  assert.ok(!caption.includes('3♦'));
+});
+
+const reviewHands = [
+  ['AS', 'KS', 'QS', 'JS', '10S', '9S', '8S', '7S'], ['AH', 'KH', 'QH', 'JH', '10H', '9H', '8H', '7H'],
+  ['AD', 'KD', 'QD', 'JD', '10D', '9D', '8D', '7D'], ['AC', 'KC', 'QC', 'JC', '10C', '9C', '8C', '7C'],
+  ['6S', '6H', '6D', '6C', '5S', '5H', '5D', '5C'], ['4S', '4H', '4D', '4C', '3S', '3H', '3D', '3C'],
+];
+const doneView = {
+  phase: 'done', bidder: 1, bid: 90, trump: 'H', partnerCards: ['AD'], revealedPartners: [2], handSizes: [0, 0, 0, 0, 0, 0],
+  allHands: reviewHands, won: [[], ['AH', 'KH'], ['10C'], [], [], []], captured: [0, 20, 10, 0, 0, 0],
+  result: { team: [1, 2], teamPoints: 30, bid: 90, success: false, scores: [0, -90, 0, 0, 0, 0] },
+};
+
+test('review screen: round complete, every player\'s dealt cards, and a button on to the result', () => {
+  const html = r.renderScreen(ctxFixture({ screen: 'review', view: doneView, state: { userTurn: false } }));
+  assert.ok(/Round complete/i.test(html));
+  assert.ok(html.includes('data-action="show-result"'));
+  assert.equal((html.match(/<svg class="face-svg/g) || []).length, 48, 'all 48 dealt cards are shown');
+  for (const name of names) assert.ok(html.includes(name));
+  assert.ok(html.includes('badge-bidder') && html.includes('badge-partner'), 'who was on the bidding team');
+  assert.ok(tileFor(html, 1).includes('A♥'), 'points won still shown at the table');
+});
+
+test('result screen can go back to the table and lists the point cards each player won', () => {
+  const board = applyRound(newScoreboard(6), doneView.result.scores);
+  const html = r.renderScreen(ctxFixture({ screen: 'result', scoreboard: board, view: doneView, state: { userTurn: false } }));
+  assert.ok(html.includes('data-action="view-table"'));
+  assert.ok(html.includes('data-action="next-round"'));
+  const row = (html.match(/<tr><td>Asha[^]*?<\/tr>/) || [''])[0];
+  assert.ok(row.includes('A♥') && row.includes('K♥'), 'Won column lists the cards');
 });

@@ -99,6 +99,7 @@ class Game {
     this.trick = [];
     this.lastTrick = null;
     this.captured = Array(n).fill(0);
+    this.won = Array.from({ length: n }, () => []); // every card each player has taken (public)
     this.revealed = new Set();
     this.result = null;
   }
@@ -179,6 +180,7 @@ class Game {
     const winner = trickWinner(this.trick, this.trump);
     const trickPoints = this.trick.reduce((s, t) => s + points(t.card), 0);
     this.captured[winner] += trickPoints;
+    this.won[winner].push(...this.trick.map((t) => t.card));
     this.lastTrick = { cards: this.trick, winner, points: trickPoints };
     this.trick = [];
     if (this.hands.every((h) => h.length === 0)) return this._finish();
@@ -222,6 +224,8 @@ class Game {
       trick: this.trick.slice(),
       lastTrick: this.lastTrick,
       captured: this.captured.slice(),
+      won: this.won.map((w) => w.slice()),
+      allHands: this.phase === 'done' ? this.initialHands.map((h) => h.slice()) : null, // only once nothing is secret any more
       removed: this.removed.slice(),
       result: this.result,
     };

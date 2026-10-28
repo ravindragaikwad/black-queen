@@ -113,6 +113,22 @@ th:first-child, td:first-child { text-align: left; }
 .badge-bidder { background: var(--red); }
 .badge-partner { background: var(--gold); color: #1b1206; }
 
+/* Point cards a player has won, under their name */
+.seat .won { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; width: 92px; margin: 3px -9px 0; }
+.won-chip { background: #fff; color: #111; border-radius: 3px; padding: 0 3px; font-size: 10px; font-weight: 700; line-height: 14px; text-shadow: none; }
+.won-chip.red { color: #c0262b; }
+.won-chip.queen { background: var(--gold); }
+.won-more { font-size: 10px; color: #fff; line-height: 14px; }
+.won-cell { text-align: left; }
+.won-cell .won { display: flex; flex-wrap: wrap; gap: 2px; }
+
+/* End-of-round review: everyone's dealt cards */
+.review-hands { display: grid; gap: 8px; }
+.review-hand { background: var(--panel); border-radius: 10px; padding: 8px; }
+.review-name { font-weight: 600; margin-bottom: 4px; }
+.review-cards { display: flex; flex-wrap: wrap; gap: 4px; }
+.review-cards .card.mini { width: 34px; height: 48px; }
+
 .trick-card { position: absolute; width: 0; height: 0; }
 .trick-card .card.mini { position: absolute; left: calc(var(--mini-w) / -2); top: calc(var(--mini-h) / -2); }
 .trick-card .card { box-shadow: 0 3px 8px rgba(0, 0, 0, .6); }

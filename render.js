@@ -5,7 +5,7 @@
   const bq = typeof require === 'function' ? require('./blackqueen') : root.BQ;
   const sbm = typeof require === 'function' ? require('./scoreboard') : root.BQ;
   const { cardSvg } = typeof require === 'function' ? require('./cards') : root.BQ;
-  const { fullDeck, legalCards, minBid, partnerCount, rankOf, suitOf, strength, SUITS, MAX_BID, BID_STEP } = bq;
+  const { fullDeck, legalCards, minBid, partnerCount, rankOf, suitOf, strength, points, SUITS, MAX_BID, BID_STEP } = bq;
 
   const SYMBOL = { S: '♠', H: '♥', D: '♦', C: '♣' };
   const HAND_SUIT_ORDER = ['S', 'H', 'C', 'D'];
@@ -16,6 +16,15 @@
   const colour = (card) => (suitOf(card) === 'H' || suitOf(card) === 'D' ? 'red' : 'black');
   const signed = (n) => (n > 0 ? `+${n}` : String(n));
   const staticCard = (card) => `<span class="card mini ${colour(card)}">${cardSvg(card)}</span>`;
+
+  // The point cards a player has won, biggest first, shortened to `max` plus a count.
+  function wonChips(cards, max = 4) {
+    const worth = (cards || []).filter((c) => points(c) > 0).sort((a, b) => points(b) - points(a) || strength(b) - strength(a));
+    if (!worth.length) return '';
+    const chip = (c) => `<span class="won-chip${c === 'QS' ? ' queen' : ''} ${colour(c)}">${label(c)}</span>`;
+    const more = worth.length > max ? `<span class="won-more">+${worth.length - max}</span>` : '';
+    return `<span class="won">${worth.slice(0, max).map(chip).join('')}${more}</span>`;
+  }
 
   function renderHand(hand, { legal, selected, partnerCards, enabled }) {
     const sorted = hand.slice().sort(
@@ -67,7 +76,7 @@
     const pos = seatPosition(i, ctx.names.length);
     const initial = esc(String(ctx.names[i]).charAt(0).toUpperCase());
     return `<div class="${classes.join(' ')}" data-seat="${i}" style="left:${pos.left}%;top:${pos.top}%">` +
-      `<span class="avatar" style="--hue:${i * 40}">${initial}</span><span class="name">${esc(ctx.names[i])}</span>${badges}<em>${esc(sub)}</em></div>`;
+      `<span class="avatar" style="--hue:${i * 40}">${initial}</span><span class="name">${esc(ctx.names[i])}</span>${badges}<em>${esc(sub)}</em>${wonChips(view.won && view.won[i])}</div>`;
   }
 
   // The round table: felt, every seat around it, a centre label, and any played cards in front of their players.
@@ -139,8 +148,9 @@
       const pos = seatPosition(t.player, ctx.names.length, 0.45);
       return `<div class="trick-card${win}" data-player="${t.player}" style="left:${pos.left}%;top:${pos.top}%">${staticCard(t.card)}</div>`;
     }).join('');
+    const trickPointCards = completedTrick ? completedTrick.cards.map((t) => t.card).filter((c) => points(c) > 0) : [];
     const caption = completedTrick
-      ? `<p class="note">${esc(ctx.names[completedTrick.winner])} wins the trick (+${completedTrick.points})</p>`
+      ? `<p class="note">${esc(ctx.names[completedTrick.winner])} wins the trick (+${completedTrick.points}${trickPointCards.length ? `: ${trickPointCards.map(label).join(', ')}` : ''})</p>`
       : '';
     let status = '';
     if (userTurn) status = 'Your turn';
@@ -156,17 +166,38 @@
       `<p class="status">${status}</p>${handFor(ctx, userTurn)}<div class="row">${playButton}</div></section>`;
   }
 
+  function renderReview(ctx) {
+    const { view } = ctx.state;
+    const res = view.result;
+    const order = (a, b) => HAND_SUIT_ORDER.indexOf(suitOf(a)) - HAND_SUIT_ORDER.indexOf(suitOf(b)) || strength(b) - strength(a);
+    const hands = ctx.names.map((name, i) => {
+      let badges = '';
+      if (i === view.bidder) badges += '<span class="badge badge-bidder">bidder</span>';
+      else if (res.team.includes(i)) badges += '<span class="badge badge-partner">partner</span>';
+      const cards = view.allHands[i].slice().sort(order).map((c) => {
+        const classes = ['card', 'mini', colour(c)];
+        if (view.partnerCards.includes(c)) classes.push('partner-card');
+        return `<span class="${classes.join(' ')}">${cardSvg(c)}</span>`;
+      }).join('');
+      return `<div class="review-hand"><div class="review-name">${esc(name)}${badges}</div><div class="review-cards">${cards}</div></div>`;
+    }).join('');
+    const centre = `<span class="bid-chip">Bid ${view.bid} ${res.success ? 'made' : 'missed'}</span>`;
+    return `<section class="screen review"><h2>Round complete</h2>${tableHtml(ctx, centre)}` +
+      '<div class="row"><button class="btn" data-action="show-result">Show result</button></div>' +
+      `<h3>Everyone's cards</h3><div class="review-hands">${hands}</div></section>`;
+  }
+
   function renderResult(ctx) {
     const { view } = ctx.state;
     const res = view.result;
     const rowsHtml = ctx.names.map((name, i) =>
-      `<tr><td>${esc(name)}${res.team.includes(i) ? ' (team)' : ''}</td><td>${signed(res.scores[i])}</td><td>${signed(ctx.scoreboard.totals[i])}</td></tr>`,
+      `<tr><td>${esc(name)}${res.team.includes(i) ? ' (team)' : ''}</td><td class="won-cell">${wonChips(view.won && view.won[i], 8)}</td><td>${signed(res.scores[i])}</td><td>${signed(ctx.scoreboard.totals[i])}</td></tr>`,
     ).join('');
     const team = res.team.map((i) => esc(ctx.names[i])).join(', ');
     return `<section class="screen result"><h2>Bid ${res.success ? 'made' : 'missed'}</h2>` +
       `<p>${esc(ctx.names[view.bidder])} bid ${res.bid}. Team (${team}) scored ${res.teamPoints}.</p>` +
-      `<table><tr><th>Player</th><th>This round</th><th>Total</th></tr>${rowsHtml}</table>` +
-      `<div class="row"><button class="btn" data-action="next-round">Deal next round</button><button class="btn ghost" data-action="stop">Stop</button></div></section>`;
+      `<table><tr><th>Player</th><th>Won</th><th>This round</th><th>Total</th></tr>${rowsHtml}</table>` +
+      '<div class="row"><button class="btn" data-action="next-round">Deal next round</button><button class="btn ghost" data-action="view-table">View table</button><button class="btn ghost" data-action="stop">Stop</button></div></section>';
   }
 
   function renderSetup(ctx) {
@@ -208,6 +239,7 @@
     let body;
     if (ctx.screen === 'setup') body = renderSetup(ctx);
     else if (ctx.screen === 'result') body = renderResult(ctx);
+    else if (ctx.screen === 'review') body = renderReview(ctx);
     else {
       const phase = ctx.state.view.phase;
       if (phase === 'bidding') body = renderBidding(ctx);

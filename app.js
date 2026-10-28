@@ -82,8 +82,8 @@
         saveScoreboard(storage, board);
         ctx.scoreboard = board;
       }
-      ctx.screen = 'result';
-    } else if (ctx.screen !== 'result') {
+      ctx.screen = 'review'; // stay on the table first; the result is one tap away
+    } else if (ctx.screen !== 'result' && ctx.screen !== 'review') {
       ctx.screen = 'game';
     }
     const before = new Set([...el.querySelectorAll('.trick-card')].map((n) => n.dataset.player));
@@ -158,6 +158,8 @@
       session.userPlay(d.card);
     },
     'toggle-sound'() { ctx.muted = sound.toggle(); draw(); },
+    'show-result'() { ctx.screen = 'result'; draw(); },
+    'view-table'() { ctx.screen = 'review'; draw(); },
     'next-round'() { begin(session.game.n); },
     stop() { ctx.setup.n = session.game.n; ctx.setup.savedMismatch = false; ctx.screen = 'setup'; draw(); },
   };

@@ -174,3 +174,41 @@ test('1000 random full games finish with correct totals and scores', () => {
     assert.equal(g.result.success, success);
   }
 });
+
+test('won records every card a player took, and only the winner of each trick gets them', () => {
+  const rng = seeded(41);
+  const g = new Game(5, { rng });
+  randomBidding(g, rng);
+  randomDeclare(g, rng);
+  assert.ok(g.won.every((w) => w.length === 0));
+  for (let i = 0; i < g.n; i++) g.play(g.turn, g.legalCards(g.turn)[0]);
+  const t = g.lastTrick;
+  assert.deepEqual(g.won[t.winner].slice().sort(), t.cards.map((c) => c.card).sort());
+  assert.equal(g.won.flat().length, 5);
+  assert.deepEqual(g.viewFor(0).won[t.winner].slice().sort(), t.cards.map((c) => c.card).sort());
+});
+
+test('won cards always add up to the captured points (random games)', () => {
+  const rng = seeded(42);
+  for (let i = 0; i < 200; i++) {
+    const g = randomGame(5 + Math.floor(rng() * 5), rng);
+    for (let p = 0; p < g.n; p++) {
+      assert.equal(g.won[p].reduce((s, c) => s + points(c), 0), g.captured[p]);
+    }
+    assert.equal(g.won.flat().length, g.n * g.initialHands[0].length);
+  }
+});
+
+test('everyone\'s dealt hands are only revealed once the round is done', () => {
+  const rng = seeded(43);
+  const g = new Game(6, { rng });
+  assert.equal(g.viewFor(0).allHands, null);
+  randomBidding(g, rng);
+  assert.equal(g.viewFor(0).allHands, null);
+  randomDeclare(g, rng);
+  assert.equal(g.viewFor(0).allHands, null);
+  g.play(g.turn, g.legalCards(g.turn)[0]);
+  assert.equal(g.viewFor(0).allHands, null, 'still hidden mid-round');
+  randomPlay(g, rng);
+  assert.deepEqual(g.viewFor(0).allHands, g.initialHands);
+});
