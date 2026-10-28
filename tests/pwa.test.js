@@ -68,3 +68,12 @@ test('sw.js uses a named cache and cleans old caches on activate', () => {
   assert.match(sw, /const CACHE = 'blackqueen-v\d+'/);
   assert.match(sw, /caches\.delete/);
 });
+
+test('sw.js asks the network first (bypassing the browser HTTP cache) and falls back to the cache offline', () => {
+  const sw = read('sw.js');
+  assert.match(sw, /fetch\(event\.request, \{ cache: 'no-cache' \}\)/);
+  assert.match(sw, /\.catch\(\(\) => caches\.match\(event\.request\)\)/);
+  assert.match(sw, /event\.waitUntil\(/, 'cache writes are kept alive until finished');
+  const version = Number(sw.match(/const CACHE = 'blackqueen-v(\d+)'/)[1]);
+  assert.ok(version >= 2, 'cache name bumped so old caches are dropped');
+});

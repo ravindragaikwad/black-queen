@@ -1,6 +1,6 @@
 'use strict';
 // Offline support. Bump CACHE's version when changing the file list so old caches are dropped.
-const CACHE = 'blackqueen-v1';
+const CACHE = 'blackqueen-v2';
 const FILES = [
   './',
   './index.html',
@@ -28,18 +28,19 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Cache first so it works offline; refresh the cached copy in the background so updates arrive next visit.
+// Network first (skipping the browser's HTTP cache) so updates show up straight away;
+// the saved copy is only used when the network is unavailable, which keeps the app working offline.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.open(CACHE).then((cache) =>
-      cache.match(event.request).then((hit) => {
-        const refresh = fetch(event.request).then((res) => {
-          if (res.ok) cache.put(event.request, res.clone());
-          return res;
-        });
-        return hit || refresh;
-      }).catch(() => cache.match(event.request)),
-    ),
+    fetch(event.request, { cache: 'no-cache' })
+      .then((res) => {
+        if (res.ok) {
+          const copy = res.clone();
+          event.waitUntil(caches.open(CACHE).then((cache) => cache.put(event.request, copy)));
+        }
+        return res;
+      })
+      .catch(() => caches.match(event.request)),
   );
 });
